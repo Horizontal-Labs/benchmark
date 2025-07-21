@@ -7,9 +7,6 @@
 [submodule "synapseSparks"]
 	path = synapsesparks
 	url = https://github.com/Horizontal-Labs/synapse-sparks.git
-[submodule "api"]
-	path = src/api
-	url = https://github.com/Horizontal-Labs/argument-mining-api.git
 [submodule "argument-mining-api"]
 	path = argument-mining-api
 	url = https://github.com/Horizontal-Labs/argument-mining-api.git
