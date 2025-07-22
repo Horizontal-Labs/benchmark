@@ -1,11 +1,11 @@
 [submodule "dbConnector"]
-	path = dbConnector
+	path = db-connector
 	url = https://github.com/Horizontal-Labs/Argument-Mining.git
 [submodule "trainingzoo"]
-	path = trainingZoo
+	path = training-zoo
 	url = https://github.com/Horizontal-Labs/training-zoo.git
 [submodule "synapseSparks"]
-	path = synapsesparks
+	path = synapse-sparks
 	url = https://github.com/Horizontal-Labs/synapse-sparks.git
 [submodule "argument-mining-api"]
 	path = argument-mining-api
