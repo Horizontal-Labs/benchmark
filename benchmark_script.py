@@ -42,7 +42,7 @@ try:
     )
     from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
     from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
-    from app.argmining.implementations.tinyllama_llm_classifier import TinyLlamaLLMClassifier
+    from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
     from app.argmining.implementations.encoder_model_loader import EncoderModelLoader
 except ImportError as e:
     print(f"Error importing argument-mining-api modules: {e}")
@@ -70,7 +70,7 @@ class ArgumentMiningBenchmark:
         self.implementations = {
             'adu_classifier': [
                 ('OpenAILLMClassifier', OpenAILLMClassifier),
-                ('TinyLlamaLLMClassifier', TinyLlamaLLMClassifier),
+                ('TinyLLamaLLMClassifier', TinyLLamaLLMClassifier),
                 ('EncoderModelLoader', EncoderModelLoader),
             ],
             'linker': [

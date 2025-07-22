@@ -47,6 +47,7 @@ def test_implementation_imports():
     implementations_to_test = [
         ('OpenAILLMClassifier', 'app.argmining.implementations.openai_llm_classifier'),
         ('OpenAIClaimPremiseLinker', 'app.argmining.implementations.openai_claim_premise_linker'),
+        ('TinyLLamaLLMClassifier', 'app.argmining.implementations.tinyllama_llm_classifier'),
     ]
     
     successful_imports = []
