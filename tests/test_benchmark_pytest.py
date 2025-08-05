@@ -187,20 +187,17 @@ class TestArgumentMiningBenchmark:
             {'text': 'This is a claim', 'type': 'claim'},
             {'text': 'Supporting evidence', 'type': 'premise'}
         ]
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['precision'] == 1.0
-                assert metrics['recall'] == 1.0
-                assert metrics['f1'] == 1.0
-                assert metrics['accuracy'] == 1.0
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
+            
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['precision'] == 1.0
+            assert metrics['recall'] == 1.0
+            assert metrics['f1'] == 1.0
+            assert metrics['accuracy'] == 1.0
     
     def test_calculate_adu_metrics_no_match(self):
         """Test ADU metrics calculation with no match."""
@@ -212,21 +209,18 @@ class TestArgumentMiningBenchmark:
             {'text': 'This is a claim', 'type': 'claim'},
             {'text': 'Supporting evidence', 'type': 'premise'}
         ]
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
+
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['precision'] == 0.0
-                assert metrics['recall'] == 0.0
-                assert metrics['f1'] == 0.0
-                assert metrics['accuracy'] == 0.0
-    
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['precision'] == 0.0
+            assert metrics['recall'] == 0.0
+            assert metrics['f1'] == 0.0
+            assert metrics['accuracy'] == 0.0
+
     def test_calculate_adu_metrics_empty_prediction(self):
         """Test ADU metrics calculation with empty prediction."""
         mock_prediction = None
@@ -234,20 +228,17 @@ class TestArgumentMiningBenchmark:
             {'text': 'This is a claim', 'type': 'claim'},
             {'text': 'Supporting evidence', 'type': 'premise'}
         ]
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
+  
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['precision'] == 0.0
-                assert metrics['recall'] == 0.0
-                assert metrics['f1'] == 0.0
-                assert metrics['accuracy'] == 0.0
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_adu_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['precision'] == 0.0
+            assert metrics['recall'] == 0.0
+            assert metrics['f1'] == 0.0
+            assert metrics['accuracy'] == 0.0
     
     def test_calculate_stance_metrics_correct(self):
         """Test stance metrics calculation with correct prediction."""
@@ -257,20 +248,17 @@ class TestArgumentMiningBenchmark:
         mock_prediction.stance_relations = [mock_stance_relation]
         
         ground_truth = 'pro'
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['accuracy'] == 1.0
-                assert metrics['weighted_f1'] == 1.0
-                assert metrics['predicted_stance'] == 'pro'
-                assert metrics['ground_truth_stance'] == 'pro'
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
+            
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['accuracy'] == 1.0
+            assert metrics['weighted_f1'] == 1.0
+            assert metrics['predicted_stance'] == 'pro'
+            assert metrics['ground_truth_stance'] == 'pro'
     
     def test_calculate_stance_metrics_incorrect(self):
         """Test stance metrics calculation with incorrect prediction."""
@@ -280,57 +268,48 @@ class TestArgumentMiningBenchmark:
         mock_prediction.stance_relations = [mock_stance_relation]
         
         ground_truth = 'pro'
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
+
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['accuracy'] == 0.0
-                assert metrics['weighted_f1'] == 0.0
-                assert metrics['predicted_stance'] == 'con'
-                assert metrics['ground_truth_stance'] == 'pro'
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['accuracy'] == 0.0
+            assert metrics['weighted_f1'] == 0.0
+            assert metrics['predicted_stance'] == 'con'
+            assert metrics['ground_truth_stance'] == 'pro'
     
     def test_calculate_stance_metrics_empty_prediction(self):
         """Test stance metrics calculation with empty prediction."""
         mock_prediction = None
         ground_truth = 'pro'
         
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
-                
-                assert metrics['accuracy'] == 0.0
-                assert metrics['weighted_f1'] == 0.0
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_stance_metrics(mock_prediction, ground_truth)
+            
+            assert metrics['accuracy'] == 0.0
+            assert metrics['weighted_f1'] == 0.0
     
     def test_calculate_linking_metrics(self):
         """Test linking metrics calculation."""
         mock_prediction = Mock()
         ground_truth = [{'claim_id': 1, 'premise_ids': [2, 3]}]
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
-            mock_get_data.return_value = []
+
+        with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
+            mock_init_impl.return_value = {}
             
-            with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
-                mock_init_impl.return_value = {}
-                
-                benchmark = ArgumentMiningBenchmark()
-                metrics = benchmark._calculate_linking_metrics(mock_prediction, ground_truth)
-                
-                # Currently returns placeholder values
-                assert 'accuracy' in metrics
-                assert 'precision' in metrics
-                assert 'recall' in metrics
-                assert 'f1' in metrics
+            benchmark = ArgumentMiningBenchmark()
+            metrics = benchmark._calculate_linking_metrics(mock_prediction, ground_truth)
+            
+            # Currently returns placeholder values
+            assert 'accuracy' in metrics
+            assert 'precision' in metrics
+            assert 'recall' in metrics
+            assert 'f1' in metrics
     
     def test_benchmark_adu_extraction_success(self, mock_environment, mock_data):
         """Test successful ADU extraction benchmark."""
@@ -339,8 +318,8 @@ class TestArgumentMiningBenchmark:
             claims=[Mock(text="This is a claim")],
             premises=[Mock(text="Supporting evidence")]
         )
-        
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = mock_data
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
@@ -351,7 +330,16 @@ class TestArgumentMiningBenchmark:
                     }
                 }
                 
+                # Create benchmark after mocking
                 benchmark = ArgumentMiningBenchmark()
+                # Manually set the implementations since the mock doesn't work on __init__
+                benchmark.implementations = {
+                    'test_impl': {
+                        'adu_classifier': mock_classifier,
+                        'linker': None
+                    }
+                }
+                
                 results = benchmark.benchmark_adu_extraction('test_impl')
                 
                 assert len(results) == 1
@@ -364,7 +352,7 @@ class TestArgumentMiningBenchmark:
         mock_classifier = Mock()
         mock_classifier.classify_adus.side_effect = Exception("Classification error")
         
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = mock_data
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
@@ -376,6 +364,14 @@ class TestArgumentMiningBenchmark:
                 }
                 
                 benchmark = ArgumentMiningBenchmark()
+                # Manually set the implementations since the mock doesn't work on __init__
+                benchmark.implementations = {
+                    'test_impl': {
+                        'adu_classifier': mock_classifier,
+                        'linker': None
+                    }
+                }
+                
                 results = benchmark.benchmark_adu_extraction('test_impl')
                 
                 assert len(results) == 1
@@ -384,13 +380,16 @@ class TestArgumentMiningBenchmark:
     
     def test_benchmark_adu_extraction_implementation_not_found(self, mock_environment, mock_data):
         """Test ADU extraction benchmark with non-existent implementation."""
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = mock_data
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
                 mock_init_impl.return_value = {}
                 
                 benchmark = ArgumentMiningBenchmark()
+                # Manually set the implementations since the mock doesn't work on __init__
+                benchmark.implementations = {}
+                
                 results = benchmark.benchmark_adu_extraction('non_existent_impl')
                 
                 assert len(results) == 0
@@ -411,20 +410,25 @@ class TestArgumentMiningBenchmark:
             ]
         }
         
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = []
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
                 mock_init_impl.return_value = {}
                 
-                with patch('app.benchmark.Path') as mock_path:
-                    mock_path.return_value = tmp_path
-                    
-                    benchmark = ArgumentMiningBenchmark()
-                    benchmark._save_results(results)
-                    
-                    # Check if results directory was created
-                    assert (tmp_path / 'results').exists()
+                benchmark = ArgumentMiningBenchmark()
+                
+                # Test that the method doesn't raise an exception
+                benchmark._save_results(results)
+                
+                # Check if results directory was created in current working directory
+                results_dir = Path("results")
+                assert results_dir.exists()
+                
+                # Clean up - remove the results directory
+                import shutil
+                if results_dir.exists():
+                    shutil.rmtree(results_dir)
     
     def test_print_summary(self, mock_environment, capsys):
         """Test printing benchmark summary."""
@@ -442,7 +446,7 @@ class TestArgumentMiningBenchmark:
             ]
         }
         
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = []
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
@@ -462,7 +466,7 @@ class TestBenchmarkIntegration:
     
     def test_full_benchmark_initialization(self):
         """Test full benchmark initialization with mocked dependencies."""
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = []
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
@@ -477,7 +481,7 @@ class TestBenchmarkIntegration:
     
     def test_benchmark_with_no_implementations(self):
         """Test benchmark behavior when no implementations are available."""
-        with patch('app.benchmark.get_benchmark_data') as mock_get_data:
+        with patch('app.benchmark.get_benchmark_data_for_evaluation') as mock_get_data:
             mock_get_data.return_value = []
             
             with patch('app.benchmark.ArgumentMiningBenchmark._initialize_implementations') as mock_init_impl:
