@@ -1,6 +1,0 @@
-[submodule "dbConnector"]
-	path = db-connector
-	url = https://github.com/Horizontal-Labs/Argument-Mining.git
-[submodule "argument-mining-api"]
-	path = argument-mining-api
-	url = https://github.com/Horizontal-Labs/argument-mining-api.git

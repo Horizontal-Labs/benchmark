@@ -1,0 +1,20 @@
+# Testing dependencies
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-xdist>=3.0.0
+pytest-html>=3.1.0
+pytest-json-report>=1.5.0
+
+# For Python 3.9 compatibility
+pytest>=6.2.0,<7.0.0
+pytest-cov>=3.0.0,<4.0.0
+pytest-mock>=3.6.0,<4.0.0
+pytest-xdist>=2.4.0,<3.0.0
+pytest-html>=2.1.0,<3.0.0
+pytest-json-report>=1.4.0,<2.0.0
+
+# Additional testing utilities
+coverage>=6.0.0
+factory-boy>=3.2.0
+freezegun>=1.2.0 

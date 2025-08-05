@@ -205,3 +205,114 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Argument Mining Benchmark Project Specific
+# ==========================================
+
+# Benchmark results and outputs
+results/
+outputs/
+benchmark_results/
+*.csv
+*.json
+*.xlsx
+*.xls
+
+# Database cache files
+.cache/
+cache/
+*.pkl
+*.pickle
+
+# Model files and checkpoints
+models/
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.bin
+
+# Hugging Face cache
+.cache/huggingface/
+.cache/transformers/
+
+# API keys and sensitive data
+.env
+.env.local
+.env.production
+.env.staging
+*.key
+*.pem
+secrets/
+
+# Log files
+logs/
+*.log
+log/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Test coverage reports
+htmlcov/
+.coverage
+coverage.xml
+.pytest_cache/
+
+# Student repositories (if using submodules)
+student-repos/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Large data files
+*.csv.gz
+*.json.gz
+*.parquet
+*.h5
+*.hdf5
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Documentation builds
+docs/_build/
+site/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Local configuration
+config.local.py
+settings.local.py
+
+
+# playground file for testing syntax
+playground.py
