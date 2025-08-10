@@ -590,8 +590,8 @@ class TestImplementationIntegration:
             if deberta_config:
                 # Check if DeBERTa checkpoints exist
                 checkpoint_paths = [
-                    Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
-                    Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
+                        "mrkk11/deberta-stance/deberta-type-checkpoints/checkpoint-3",
+                        "mrkk11/deberta-stance/deberta-stance-checkpoints/checkpoint-3"
                 ]
                 
                 if all(p.exists() for p in checkpoint_paths):
@@ -650,8 +650,8 @@ class TestImplementationIntegration:
             if deberta_config:
                 # Check if DeBERTa checkpoints exist
                 checkpoint_paths = [
-                    Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
-                    Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
+                        "mrkk11/deberta-stance/deberta-type-checkpoints/checkpoint-3",
+                        "mrkk11/deberta-stance/deberta-stance-checkpoints/checkpoint-3"
                 ]
                 
                 if all(p.exists() for p in checkpoint_paths):
