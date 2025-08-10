@@ -1,0 +1,6 @@
+[submodule "external/argument-mining-api"]
+	path = external/argument-mining-api
+	url = https://github.com/Horizontal-Labs/argument-mining-api.git
+[submodule "external/argument-mining-db"]
+	path = external/argument-mining-db
+	url = https://github.com/Horizontal-Labs/argument-mining-db.git
