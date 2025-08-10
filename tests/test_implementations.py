@@ -190,35 +190,31 @@ class TestTinyLlamaImplementation:
         """Test TinyLlama classifier with a claim sentence."""
         if not HF_TOKEN:
             pytest.skip("Hugging Face token not available in config")
+
+        classifier = TinyLLamaLLMClassifier()
         
-        try:
-            classifier = TinyLLamaLLMClassifier()
-            
-            # Test with a clear claim
-            test_sentence = "Climate change is caused by human activities."
-            result = classifier.classify_sentence(test_sentence)
-            
-            assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-            log.info(f"✓ TinyLlama classifier classified claim sentence: {result}")
-        except Exception as e:
-            pytest.skip(f"TinyLlama classifier test failed: {e}")
+        # Test with a clear claim
+        test_sentence = "Climate change is caused by human activities."
+        result = classifier.classify_sentence(test_sentence)
+        
+        assert result in ['claim', 'premise'], f"Unexpected result: {result}"
+        log.info(f"✓ TinyLlama classifier classified claim sentence: {result}")
+
     
     def test_tinyllama_classify_sentence_premise(self, mock_environment):
         """Test TinyLlama classifier with a premise sentence."""
         if not HF_TOKEN:
             pytest.skip("Hugging Face token not available in config")
         
-        try:
-            classifier = TinyLLamaLLMClassifier()
-            
-            # Test with a clear premise
-            test_sentence = "Scientific studies show increasing global temperatures."
-            result = classifier.classify_sentence(test_sentence)
-            
-            assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-            log.info(f"✓ TinyLlama classifier classified premise sentence: {result}")
-        except Exception as e:
-            pytest.skip(f"TinyLlama classifier test failed: {e}")
+        classifier = TinyLLamaLLMClassifier()
+        
+        # Test with a clear premise
+        test_sentence = "Scientific studies show increasing global temperatures."
+        result = classifier.classify_sentence(test_sentence)
+        
+        assert result in ['claim', 'premise'], f"Unexpected result: {result}"
+        log.info(f"✓ TinyLlama classifier classified premise sentence: {result}")
+
     
     def test_tinyllama_classify_adus_no_fallback(self, mock_environment):
         """Test TinyLlama classifier ADU extraction without fallback."""
@@ -372,101 +368,94 @@ class TestDeBERTaImplementation:
     
     def test_deberta_classifier_initialization(self):
         """Test DeBERTa classifier initialization."""
-        try:
-            deberta_config = MODEL_CONFIGS.get('deberta')
-            if not deberta_config:
-                pytest.skip("DeBERTa configuration not available")
-            
-            # Check if DeBERTa checkpoints exist
-            checkpoint_paths = [
-                Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
-                Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
-            ]
-            
-            missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
-            if missing_checkpoints:
-                pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
-            
-            classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
-            assert classifier is not None
-            assert hasattr(classifier, 'tokenizer')
-            assert hasattr(classifier, 'base_model_path')
-            assert hasattr(classifier, 'model_paths')
-            log.info("✓ DeBERTa classifier initialized successfully")
-        except Exception as e:
-            pytest.skip(f"DeBERTa classifier initialization failed: {e}")
+
+        deberta_config = MODEL_CONFIGS.get('deberta')
+        if not deberta_config:
+            pytest.skip("DeBERTa configuration not available")
+        
+        # Check if DeBERTa checkpoints exist
+        checkpoint_paths = [
+            Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
+            Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
+        ]
+        
+        missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
+        if missing_checkpoints:
+            pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
+        
+        classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
+        assert classifier is not None
+        assert hasattr(classifier, 'tokenizer')
+        assert hasattr(classifier, 'base_model_path')
+        assert hasattr(classifier, 'model_paths')
+        log.info("✓ DeBERTa classifier initialized successfully")
     
     def test_deberta_classify_adus(self):
         """Test DeBERTa ADU classification."""
-        try:
-            deberta_config = MODEL_CONFIGS.get('deberta')
-            if not deberta_config:
-                pytest.skip("DeBERTa configuration not available")
-            
-            # Check if DeBERTa checkpoints exist
-            checkpoint_paths = [
-                Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
-                Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
-            ]
-            
-            missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
-            if missing_checkpoints:
-                pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
-            
-            classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
-            
-            # Test with argumentative text
-            test_text = "Climate change is real. Scientific evidence shows increasing temperatures. We must take action."
-            result = classifier.classify_adus(test_text)
-            
-            assert isinstance(result, UnlinkedArgumentUnits)
-            assert hasattr(result, 'claims')
-            assert hasattr(result, 'premises')
-            assert isinstance(result.claims, list)
-            assert isinstance(result.premises, list)
-            
-            log.info(f"✓ DeBERTa classified {len(result.claims)} claims and {len(result.premises)} premises")
-        except Exception as e:
-            pytest.skip(f"DeBERTa ADU classification failed: {e}")
+
+        deberta_config = MODEL_CONFIGS.get('deberta')
+        if not deberta_config:
+            pytest.skip("DeBERTa configuration not available")
+        
+        # Check if DeBERTa checkpoints exist
+        checkpoint_paths = [
+            Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
+            Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
+        ]
+        
+        missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
+        if missing_checkpoints:
+            pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
+        
+        classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
+        
+        # Test with argumentative text
+        test_text = "Climate change is real. Scientific evidence shows increasing temperatures. We must take action."
+        result = classifier.classify_adus(test_text)
+        
+        assert isinstance(result, UnlinkedArgumentUnits)
+        assert hasattr(result, 'claims')
+        assert hasattr(result, 'premises')
+        assert isinstance(result.claims, list)
+        assert isinstance(result.premises, list)
+        
+        log.info(f"✓ DeBERTa classified {len(result.claims)} claims and {len(result.premises)} premises")
     
     def test_deberta_classify_stance(self):
         """Test DeBERTa stance classification."""
-        try:
-            deberta_config = MODEL_CONFIGS.get('deberta')
-            if not deberta_config:
-                pytest.skip("DeBERTa configuration not available")
-            
-            # Check if DeBERTa checkpoints exist
-            checkpoint_paths = [
-                Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
-                Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
-            ]
-            
-            missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
-            if missing_checkpoints:
-                pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
-            
-            classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
-            
-            # Create test argument units
-            claims = [ArgumentUnit(text="Climate change is real", type="claim")]
-            premises = [ArgumentUnit(text="Scientific evidence shows increasing temperatures", type="premise")]
-            linked_units = LinkedArgumentUnits(
-                claims=claims,
-                premises=premises,
-                claims_premises_relationships=[]
-            )
-            
-            result = classifier.classify_stance(linked_units, "Climate change is real. Scientific evidence shows increasing temperatures.")
-            
-            assert isinstance(result, LinkedArgumentUnitsWithStance)
-            assert hasattr(result, 'stance_relations')
-            assert isinstance(result.stance_relations, list)
-            
-            log.info(f"✓ DeBERTa classified stance with {len(result.stance_relations)} relations")
-        except Exception as e:
-            pytest.skip(f"DeBERTa stance classification failed: {e}")
 
+        deberta_config = MODEL_CONFIGS.get('deberta')
+        if not deberta_config:
+            pytest.skip("DeBERTa configuration not available")
+        
+        # Check if DeBERTa checkpoints exist
+        checkpoint_paths = [
+            Path("app/argmining/argmining/implementations/deberta-type-checkpoints/checkpoint-3"),
+            Path("app/argmining/argmining/implementations/deberta-stance-checkpoints/checkpoint-3")
+        ]
+        
+        missing_checkpoints = [str(p) for p in checkpoint_paths if not p.exists()]
+        if missing_checkpoints:
+            pytest.skip(f"DeBERTa checkpoints not available: {', '.join(missing_checkpoints)}")
+        
+        classifier = NonTrainedEncoderModelLoader(**deberta_config['params'])
+        
+        # Create test argument units
+        claims = [ArgumentUnit(text="Climate change is real", type="claim")]
+        premises = [ArgumentUnit(text="Scientific evidence shows increasing temperatures", type="premise")]
+        linked_units = LinkedArgumentUnits(
+            claims=claims,
+            premises=premises,
+            claims_premises_relationships=[]
+        )
+        
+        result = classifier.classify_stance(linked_units, "Climate change is real. Scientific evidence shows increasing temperatures.")
+        
+        assert isinstance(result, LinkedArgumentUnitsWithStance)
+        assert hasattr(result, 'stance_relations')
+        assert isinstance(result.stance_relations, list)
+        
+        log.info(f"✓ DeBERTa classified stance with {len(result.stance_relations)} relations")
 
 class TestOpenAIClaimPremiseLinker:
     """Test OpenAI Claim-Premise Linker implementation."""
