@@ -31,7 +31,14 @@ from dataclasses import dataclass
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import warnings
 import traceback
-from app.log import log
+# Import log from external API if available, otherwise use local
+try:
+    from app.log import log
+except ImportError:
+    # Create a simple logger if external log module is not available
+    import logging
+    log = logging.getLogger(__name__)
+    logging.basicConfig(level=logging.INFO)
 from datetime import datetime
 
 warnings.filterwarnings('ignore')
@@ -40,40 +47,67 @@ warnings.filterwarnings('ignore')
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Add external submodules to Python path
+external_api = project_root / "external" / "argument-mining-api"
+external_db = project_root / "external" / "argument-mining-db"
+
+if external_api.exists():
+    sys.path.insert(0, str(external_api))
+    print(f"✓ Added argument-mining-api to Python path: {external_api}")
+else:
+    print(f"⚠️  argument-mining-api not found at: {external_api}")
+
+if external_db.exists():
+    sys.path.insert(0, str(external_db))
+    print(f"✓ Added argument-mining-db to Python path: {external_db}")
+else:
+    print(f"⚠️  argument-mining-db not found at: {external_db}")
+
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# Import argument mining components
-
-from app.argmining.interfaces.adu_and_stance_classifier import AduAndStanceClassifier
-from app.argmining.interfaces.claim_premise_linker import ClaimPremiseLinker
-from app.argmining.models.argument_units import (
-    ArgumentUnit, 
-    UnlinkedArgumentUnits, 
-    LinkedArgumentUnits, 
-    LinkedArgumentUnitsWithStance,
-    StanceRelation,
-    ClaimPremiseRelationship
-)
-from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
-from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
-from app.argmining.implementations.encoder_model_loader import (
-    PeftEncoderModelLoader, 
-    NonTrainedEncoderModelLoader,
-    MODEL_CONFIGS
-)
-from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
-print("✓ Successfully imported argument mining components")
-
-# Import database components
+# Import argument mining components from external API
 try:
-    from app.db_connector.db.queries import get_benchmark_data_for_evaluation
-    print("✓ Successfully imported database components")
+    from app.argmining.interfaces.adu_and_stance_classifier import AduAndStanceClassifier
+    from app.argmining.interfaces.claim_premise_linker import ClaimPremiseLinker
+    from app.argmining.models.argument_units import (
+        ArgumentUnit, 
+        UnlinkedArgumentUnits, 
+        LinkedArgumentUnits, 
+        LinkedArgumentUnitsWithStance,
+        StanceRelation,
+        ClaimPremiseRelationship
+    )
+    from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
+    from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
+    from app.argmining.implementations.encoder_model_loader import (
+        PeftEncoderModelLoader, 
+        NonTrainedEncoderModelLoader,
+        MODEL_CONFIGS
+    )
+    from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
+    print("✓ Successfully imported argument mining components from external API")
+except ImportError as e:
+    print(f"❌ Error importing argument mining components: {e}")
+    print(f"Traceback: {traceback.format_exc()}")
+    sys.exit(1)
+
+# Import database components from external DB
+try:
+    from db.queries import get_benchmark_data
+    print("✓ Successfully imported database components from external DB")
 except ImportError as e:
     print(f"❌ Error importing database components: {e}")
     print(f"Traceback: {traceback.format_exc()}")
-    sys.exit(1)
+    # Fallback to local db_connector if external fails
+    try:
+        from app.db_connector.db.queries import get_benchmark_data_for_evaluation
+        print("✓ Successfully imported database components from local db_connector")
+    except ImportError as e2:
+        print(f"❌ Error importing database components from local db_connector: {e2}")
+        print(f"Traceback: {traceback.format_exc()}")
+        sys.exit(1)
 
 
 @dataclass
@@ -187,8 +221,31 @@ class ArgumentMiningBenchmark:
     def _load_benchmark_data(self):
         """Load benchmark data from database."""
         try:
-            self.data = get_benchmark_data_for_evaluation(self.max_samples)
-            log.info(f"Loaded {len(self.data)} benchmark samples (requested: {self.max_samples})")
+            # Try to use external DB function first
+            try:
+                claims, premises, categories = get_benchmark_data()
+                # Convert to the expected format
+                self.data = []
+                for i, (claim, premise, category) in enumerate(zip(claims, premises, categories)):
+                    if i >= self.max_samples:
+                        break
+                    sample = {
+                        'text': f"{claim.text} {premise.text}",
+                        'ground_truth': {
+                            'adus': [
+                                {'text': claim.text, 'type': 'claim'},
+                                {'text': premise.text, 'type': 'premise'}
+                            ],
+                            'stance': category,
+                            'relationships': [{'claim_id': claim.id, 'premise_id': premise.id}]
+                        }
+                    }
+                    self.data.append(sample)
+                log.info(f"Loaded {len(self.data)} benchmark samples from external DB (requested: {self.max_samples})")
+            except NameError:
+                # Fallback to local function if external function not available
+                self.data = get_benchmark_data_for_evaluation(self.max_samples)
+                log.info(f"Loaded {len(self.data)} benchmark samples from local DB (requested: {self.max_samples})")
         except Exception as e:
             log.error(f"Failed to load benchmark data: {e}")
             log.error(f"Traceback: {traceback.format_exc()}")

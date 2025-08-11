@@ -1,57 +1,89 @@
 # Core benchmark dependencies
-pandas>=1.5.0,<2.0.0
-numpy>=1.21.0,<2.0.0
-scikit-learn>=1.0.0,<1.4.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+ipykernel>=6.25.0
 tqdm>=4.65.0
-rich>=12.0.0,<14.0.0
+rich>=13.0.0
 plotly>=5.15.0
 
+# Evaluation metrics
+seqeval>=1.2.2
+nltk>=3.8.1
+
+# Database and data handling
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+alembic>=1.11.0
+mariadb>=1.1.0
+
+# Machine Learning
+torch>=2.0.0
+transformers>=4.30.0
+datasets>=2.14.0
+accelerate>=1.10.0
+peft>=0.16.0
+
+# Configuration and utilities
+pyyaml>=6.0
+click>=8.1.0
+python-dotenv>=1.1.1
+
 # Database connector dependencies (from argument-mining-db)
-greenlet>=2.0.0,<3.0.0
-mysql-connector-python>=8.0.0,<9.0.0
-PyMySQL>=1.0.0,<2.0.0
-python-dateutil>=2.8.0,<3.0.0
-pytz>=2022.0,<2024.0
-six>=1.16.0,<2.0.0
-SQLAlchemy>=1.4.0,<2.0.0
-typing_extensions>=4.0.0,<5.0.0
-tzdata>=2022.0,<2024.0
+greenlet>=3.2.1
+mysql-connector-python>=9.3.0
+PyMySQL>=1.1.1
+python-dateutil>=2.9.0
+pytz>=2025.2
+six>=1.17.0
+typing_extensions>=4.13.2
+tzdata>=2025.2
 
 # Argument mining API dependencies (from argument-mining-api)
-annotated-types>=0.4.0,<0.6.0
-anyio>=3.6.0,<4.0.0
-bitsandbytes>=0.41.0,<0.45.0
-charset-normalizer>=3.0.0,<3.4.0
-certifi>=2022.0,<2024.0
-click>=8.0.0,<8.2.0
-colorama>=0.4.0,<0.5.0
-fastapi>=0.95.0,<0.100.0
-h11>=0.14.0,<0.15.0
-huggingface-hub>=0.15.0,<0.30.0
-httpcore>=0.17.0,<0.18.0
-httpx>=0.24.0,<0.25.0
-idna>=3.3.0,<3.4.0
-openai>=0.28.0,<1.0.0
-pydantic>=1.10.0,<2.0.0
-peft>=0.4.0,<0.5.0
-protobuf>=3.20.0,<4.0.0
-pydantic-settings>=1.2.0,<2.0.0
-pydantic_core>=1.10.0,<2.0.0
-python-dotenv>=0.19.0,<1.0.0
-sniffio>=1.2.0,<1.3.0
-starlette>=0.26.0,<0.27.0
-torch>=1.13.0,<2.0.0
-transformers>=4.21.0,<4.30.0
-typing-inspection>=0.8.0,<0.9.0
-uvicorn>=0.20.0,<0.22.0
+annotated-types>=0.7.0
+anyio>=4.9.0
+bitsandbytes>=0.46.0
+charset-normalizer>=3.4.2
+certifi>=2025.6.15
+colorama>=0.4.6
+fastapi>=0.115.13
+h11>=0.16.0
+huggingface-hub>=0.33.0
+httpcore>=1.0.9
+httpx>=0.28.1
+idna>=3.10
+protobuf>=6.31.1
+pydantic>=1.10.0
+pydantic-settings>=2.10.1
+pydantic_core>=2.33.2
+sniffio>=1.3.1
+starlette>=0.46.2
+typing-inspection>=0.4.1
+uvicorn>=0.35.0
 
+# Additional dependencies installed during development
+filelock>=3.18.0
+fsspec>=2025.7.0
+Jinja2>=3.1.6
+jiter>=0.10.0
+joblib>=1.5.1
+MarkupSafe>=3.0.2
+mpmath>=1.3.0
+networkx>=3.2.1
+packaging>=25.0
+psutil>=7.0.0
+PyYAML>=6.0.2
+regex>=2025.7.34
+requests>=2.32.4
+safetensors>=0.6.2
+scipy>=1.13.1
+sympy>=1.14.0
+threadpoolctl>=3.6.0
+tokenizers>=0.21.4
+urllib3>=2.5.0
 
-pandas
-scikit-learn
-dotenv
-openai
-torch
-transformers
-peft
-sqlalchemy
-mariadb
+# OpenAI API
+openai>=1.0.0

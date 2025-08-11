@@ -13,9 +13,13 @@ class Config:
     # Project root directory
     PROJECT_ROOT = Path(__file__).parent.parent
     
-    # Integrated component paths (no longer using submodules)
+    # External submodule paths
+    EXTERNAL_DIR = PROJECT_ROOT / "external"
+    ARGUMENT_MINING_API_PATH = EXTERNAL_DIR / "argument-mining-api"
+    ARGUMENT_MINING_DB_PATH = EXTERNAL_DIR / "argument-mining-db"
+    
+    # Local component paths
     DB_CONNECTOR_PATH = PROJECT_ROOT / "app" / "db_connector"
-    API_PATH = PROJECT_ROOT / "app" / "argument_mining_api"
     
     # Data paths
     DATA_DIR = PROJECT_ROOT / "data"
@@ -34,16 +38,20 @@ class Config:
         """Validate that all required components exist."""
         missing = []
         
-        if not cls.DB_CONNECTOR_PATH.exists():
-            missing.append("db_connector")
+        if not cls.ARGUMENT_MINING_API_PATH.exists():
+            missing.append("argument-mining-api submodule")
         
-        if not cls.API_PATH.exists():
-            missing.append("argument_mining_api")
+        if not cls.ARGUMENT_MINING_DB_PATH.exists():
+            missing.append("argument-mining-db submodule")
+        
+        if not cls.DB_CONNECTOR_PATH.exists():
+            missing.append("local db_connector")
         
         if missing:
             raise RuntimeError(
                 f"Missing components: {', '.join(missing)}. "
-                "These should be part of the integrated project structure."
+                "Please ensure all submodules are properly initialized with: "
+                "git submodule update --init --recursive"
             )
     
     # Environment detection
@@ -56,6 +64,26 @@ class Config:
     def is_production(cls):
         """Check if running in production mode."""
         return os.getenv("ENVIRONMENT") == "production"
+    
+    # Submodule status
+    @classmethod
+    def get_submodule_status(cls):
+        """Get status of external submodules."""
+        status = {}
+        
+        status['argument_mining_api'] = {
+            'path': cls.ARGUMENT_MINING_API_PATH,
+            'exists': cls.ARGUMENT_MINING_API_PATH.exists(),
+            'is_git_repo': (cls.ARGUMENT_MINING_API_PATH / '.git').exists()
+        }
+        
+        status['argument_mining_db'] = {
+            'path': cls.ARGUMENT_MINING_DB_PATH,
+            'exists': cls.ARGUMENT_MINING_DB_PATH.exists(),
+            'is_git_repo': (cls.ARGUMENT_MINING_DB_PATH / '.git').exists()
+        }
+        
+        return status
 
 
 # Global configuration instance

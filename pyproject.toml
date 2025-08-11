@@ -96,6 +96,33 @@ dependencies = [
     "starlette>=0.46.2",
     "typing-inspection>=0.4.1",
     "uvicorn>=0.35.0",
+    
+    # Additional dependencies installed during development
+    "accelerate>=1.10.0",
+    "filelock>=3.18.0",
+    "fsspec>=2025.7.0",
+    "Jinja2>=3.1.6",
+    "jiter>=0.10.0",
+    "joblib>=1.5.1",
+    "MarkupSafe>=3.0.2",
+    "mpmath>=1.3.0",
+    "networkx>=3.2.1",
+    "packaging>=25.0",
+    "psutil>=7.0.0",
+    "PyYAML>=6.0.2",
+    "regex>=2025.7.34",
+    "requests>=2.32.4",
+    "safetensors>=0.6.2",
+    "scipy>=1.13.1",
+    "sympy>=1.14.0",
+    "threadpoolctl>=3.6.0",
+    "tokenizers>=0.21.4",
+    "tqdm>=4.67.1",
+    "typing_extensions>=4.14.1",
+    "urllib3>=2.5.0",
+    
+    # Database connector (MariaDB)
+    "mariadb>=1.1.0",
 ]
 
 [project.optional-dependencies]
