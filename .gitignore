@@ -316,3 +316,5 @@ settings.local.py
 
 # playground file for testing syntax
 playground.py
+external/db/
+external/api/

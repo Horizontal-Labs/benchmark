@@ -17,7 +17,7 @@ def test_imports():
     
     try:
         # Test database connector
-        from app.db_connector.db.queries import get_benchmark_data_for_evaluation
+        from db.queries import get_benchmark_data_for_evaluation
         print("✓ Database connector import successful")
         
         # Test argument mining API
@@ -40,7 +40,7 @@ def test_data_loading():
     print("\nTesting data loading...")
     
     try:
-        from app.db_connector.db.queries import get_benchmark_data_for_evaluation
+        from db.queries import get_benchmark_data_for_evaluation
         
         data = get_benchmark_data_for_evaluation()
         print(f"✓ Successfully loaded {len(data)} benchmark samples")

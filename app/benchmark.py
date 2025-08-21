@@ -48,8 +48,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Add external submodules to Python path
-external_api = project_root / "external" / "argument-mining-api"
-external_db = project_root / "external" / "argument-mining-db"
+external_api = project_root / "external" / "api"
+external_db = project_root / "external" / "db"
 
 if external_api.exists():
     sys.path.insert(0, str(external_api))
@@ -92,6 +92,7 @@ except ImportError as e:
     print(f"❌ Error importing argument mining components: {e}")
     print(f"Traceback: {traceback.format_exc()}")
     sys.exit(1)
+
 
 # Import database components from external DB
 try:
@@ -251,9 +252,9 @@ class ArgumentMiningBenchmark:
             log.error(f"Traceback: {traceback.format_exc()}")
             self.data = []
     
-    def benchmark_adu_extraction(self, implementation_name: str) -> List[BenchmarkResult]:
-        """Benchmark ADU extraction task."""
-        log.info(f"Benchmarking ADU extraction with {implementation_name}")
+    def benchmark_adu_identification(self, implementation_name: str) -> List[BenchmarkResult]:
+        """Benchmark ADU identification task."""
+        log.info(f"Benchmarking ADU identification with {implementation_name}")
         
         if implementation_name not in self.implementations:
             log.warning(f"Implementation {implementation_name} not available")
@@ -270,11 +271,11 @@ class ArgumentMiningBenchmark:
                 inference_time = time.time() - start_time
                 
                 # Calculate metrics
-                metrics = self._calculate_adu_metrics(prediction, sample['ground_truth']['adus'])
+                metrics = self._calculate_adu_identification_metrics(prediction, sample['ground_truth']['adus'])
                 performance = {'inference_time': inference_time}
                 
                 result = BenchmarkResult(
-                    task_name='adu_extraction',
+                    task_name='adu_identification',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
                     metrics=metrics,
@@ -288,7 +289,58 @@ class ArgumentMiningBenchmark:
                 log.error(f"Error processing sample {i} with {implementation_name}: {e}")
                 log.error(f"Traceback: {traceback.format_exc()}")
                 result = BenchmarkResult(
-                    task_name='adu_extraction',
+                    task_name='adu_identification',
+                    implementation_name=implementation_name,
+                    sample_id=f"sample_{i}",
+                    metrics={},
+                    performance={},
+                    predictions=None,
+                    ground_truth=sample['ground_truth']['adus'],
+                    error_message=f"{str(e)}\n{traceback.format_exc()}",
+                    success=False
+                )
+                results.append(result)
+        
+        return results
+    
+    def benchmark_adu_classification(self, implementation_name: str) -> List[BenchmarkResult]:
+        """Benchmark ADU classification task."""
+        log.info(f"Benchmarking ADU classification with {implementation_name}")
+        
+        if implementation_name not in self.implementations:
+            log.warning(f"Implementation {implementation_name} not available")
+            return []
+        
+        classifier = self.implementations[implementation_name]['adu_classifier']
+        results = []
+        
+        for i, sample in enumerate(self.data):
+            try:
+                # Measure inference time
+                start_time = time.time()
+                prediction = classifier.classify_adus(sample['text'])
+                inference_time = time.time() - start_time
+                
+                # Calculate metrics
+                metrics = self._calculate_adu_classification_metrics(prediction, sample['ground_truth']['adus'])
+                performance = {'inference_time': inference_time}
+                
+                result = BenchmarkResult(
+                    task_name='adu_classification',
+                    implementation_name=implementation_name,
+                    sample_id=f"sample_{i}",
+                    metrics=metrics,
+                    performance=performance,
+                    predictions=prediction,
+                    ground_truth=sample['ground_truth']['adus']
+                )
+                results.append(result)
+                
+            except Exception as e:
+                log.error(f"Error processing sample {i} with {implementation_name}: {e}")
+                log.error(f"Traceback: {traceback.format_exc()}")
+                result = BenchmarkResult(
+                    task_name='adu_classification',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
                     metrics={},
@@ -422,8 +474,8 @@ class ArgumentMiningBenchmark:
         
         return results
     
-    def _calculate_adu_metrics(self, prediction, ground_truth: List[Dict]) -> Dict[str, float]:
-        """Calculate token-level metrics for ADU extraction."""
+    def _calculate_adu_identification_metrics(self, prediction, ground_truth: List[Dict]) -> Dict[str, float]:
+        """Calculate token-level metrics for ADU identification."""
         if not prediction or not ground_truth:
             return {'precision': 0.0, 'recall': 0.0, 'f1': 0.0, 'accuracy': 0.0}
         
@@ -455,6 +507,53 @@ class ArgumentMiningBenchmark:
             'true_positives': true_positives,
             'false_positives': false_positives,
             'false_negatives': false_negatives
+        }
+    
+    def _calculate_adu_classification_metrics(self, prediction, ground_truth: List[Dict]) -> Dict[str, float]:
+        """Calculate metrics for ADU classification (claim vs premise)."""
+        if not prediction or not ground_truth:
+            return {'precision': 0.0, 'recall': 0.0, 'f1': 0.0, 'accuracy': 0.0}
+        
+        # Extract predicted ADUs with their types
+        predicted_claims = [adu.text for adu in prediction.claims] if hasattr(prediction, 'claims') else []
+        predicted_premises = [adu.text for adu in prediction.premises] if hasattr(prediction, 'premises') else []
+        
+        # Extract ground truth ADUs with their types
+        gt_claims = [adu['text'] for adu in ground_truth if adu.get('type') == 'claim']
+        gt_premises = [adu['text'] for adu in ground_truth if adu.get('type') == 'premise']
+        
+        # Calculate metrics for claims
+        claim_true_positives = len(set(predicted_claims) & set(gt_claims))
+        claim_false_positives = len(set(predicted_claims) - set(gt_claims))
+        claim_false_negatives = len(set(gt_claims) - set(predicted_claims))
+        
+        # Calculate metrics for premises
+        premise_true_positives = len(set(predicted_premises) & set(gt_premises))
+        premise_false_positives = len(set(predicted_premises) - set(gt_premises))
+        premise_false_negatives = len(set(gt_premises) - set(predicted_premises))
+        
+        # Aggregate metrics
+        total_true_positives = claim_true_positives + premise_true_positives
+        total_false_positives = claim_false_positives + premise_false_positives
+        total_false_negatives = claim_false_negatives + premise_false_negatives
+        
+        precision = total_true_positives / (total_true_positives + total_false_positives) if (total_true_positives + total_false_positives) > 0 else 0
+        recall = total_true_positives / (total_true_positives + total_false_negatives) if (total_true_positives + total_false_negatives) > 0 else 0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+        accuracy = total_true_positives / (len(gt_claims) + len(gt_premises)) if (len(gt_claims) + len(gt_premises)) > 0 else 0
+        
+        return {
+            'precision': precision,
+            'recall': recall,
+            'f1': f1,
+            'accuracy': accuracy,
+            'claim_precision': claim_true_positives / (claim_true_positives + claim_false_positives) if (claim_true_positives + claim_false_positives) > 0 else 0,
+            'claim_recall': claim_true_positives / (claim_true_positives + claim_false_negatives) if (claim_true_positives + claim_false_negatives) > 0 else 0,
+            'premise_precision': premise_true_positives / (premise_true_positives + premise_false_positives) if (premise_true_positives + premise_false_positives) > 0 else 0,
+            'premise_recall': premise_true_positives / (premise_true_positives + premise_false_negatives) if (premise_true_positives + premise_false_negatives) > 0 else 0,
+            'true_positives': total_true_positives,
+            'false_positives': total_false_positives,
+            'false_negatives': total_false_negatives
         }
     
     def _calculate_stance_metrics(self, prediction, ground_truth: str) -> Dict[str, float]:
@@ -508,7 +607,7 @@ class ArgumentMiningBenchmark:
     def run_benchmark(self, tasks: List[str] = None, implementations: List[str] = None) -> Dict[str, List[BenchmarkResult]]:
         """Run the complete benchmark suite."""
         if tasks is None:
-            tasks = ['adu_extraction', 'stance_classification', 'claim_premise_linking']
+            tasks = ['adu_identification', 'adu_classification', 'stance_classification', 'claim_premise_linking']
         
         if implementations is None:
             implementations = list(self.implementations.keys())
@@ -527,8 +626,10 @@ class ArgumentMiningBenchmark:
                     continue
                 
                 try:
-                    if task == 'adu_extraction':
-                        results = self.benchmark_adu_extraction(impl_name)
+                    if task == 'adu_identification':
+                        results = self.benchmark_adu_identification(impl_name)
+                    elif task == 'adu_classification':
+                        results = self.benchmark_adu_classification(impl_name)
                     elif task == 'stance_classification':
                         results = self.benchmark_stance_classification(impl_name)
                     elif task == 'claim_premise_linking':
@@ -639,6 +740,197 @@ class ArgumentMiningBenchmark:
         print("\n" + "="*80)
 
 
+def run_specific_benchmark(task: str, implementation: str, data_length: int) -> Dict[str, Any]:
+    """
+    Run a specific benchmark for a given task, implementation, and data length.
+    
+    Args:
+                 task (str): The argument mining task to benchmark. 
+                    Options: 'adu_identification', 'adu_classification', 'stance_classification', 'claim_premise_linking'
+        implementation (str): The implementation to test.
+                             Options: 'openai', 'tinyllama', 'modernbert', 'deberta'
+        data_length (int): Number of datapoints to use for the benchmark
+    
+    Returns:
+        Dict[str, Any]: Dictionary containing benchmark results with the following structure:
+            {
+                'task': str,
+                'implementation': str,
+                'data_length': int,
+                'results': List[BenchmarkResult],
+                'summary': Dict[str, float],
+                'success': bool,
+                'error_message': str (if any)
+            }
+    
+    Raises:
+        ValueError: If task or implementation is not supported
+    """
+    # Validate task parameter
+    valid_tasks = ['adu_identification', 'adu_classification', 'stance_classification', 'claim_premise_linking']
+    if task not in valid_tasks:
+        raise ValueError(f"Invalid task '{task}'. Must be one of: {valid_tasks}")
+    
+    # Validate implementation parameter
+    valid_implementations = ['openai', 'tinyllama', 'modernbert', 'deberta']
+    if implementation not in valid_implementations:
+        raise ValueError(f"Invalid implementation '{implementation}'. Must be one of: {valid_implementations}")
+    
+    # Validate data_length parameter
+    if data_length <= 0:
+        raise ValueError(f"data_length must be positive, got: {data_length}")
+    
+    try:
+        # Initialize benchmark with specified data length
+        benchmark = ArgumentMiningBenchmark(max_samples=data_length)
+        
+        # Check if the requested implementation is available
+        if implementation not in benchmark.implementations:
+            return {
+                'task': task,
+                'implementation': implementation,
+                'data_length': data_length,
+                'results': [],
+                'summary': {},
+                'success': False,
+                'error_message': f"Implementation '{implementation}' is not available. Available implementations: {list(benchmark.implementations.keys())}"
+            }
+        
+        # Run the specific task with the specific implementation
+        log.info(f"Running {task} benchmark with {implementation} implementation on {data_length} samples")
+        
+        if task == 'adu_identification':
+            results = benchmark.benchmark_adu_identification(implementation)
+        elif task == 'adu_classification':
+            results = benchmark.benchmark_adu_classification(implementation)
+        elif task == 'stance_classification':
+            results = benchmark.benchmark_stance_classification(implementation)
+        elif task == 'claim_premise_linking':
+            results = benchmark.benchmark_claim_premise_linking(implementation)
+        else:
+            # This should not happen due to validation above, but just in case
+            raise ValueError(f"Unknown task: {task}")
+        
+        # Calculate summary statistics
+        successful_results = [r for r in results if r.success]
+        if not successful_results:
+            return {
+                'task': task,
+                'implementation': implementation,
+                'data_length': data_length,
+                'results': results,
+                'summary': {},
+                'success': False,
+                'error_message': f"No successful results for {task} with {implementation}"
+            }
+        
+        # Calculate average metrics
+        summary = {}
+        if successful_results:
+            # Calculate average metrics across all successful results
+            for metric_name in successful_results[0].metrics.keys():
+                values = [r.metrics[metric_name] for r in successful_results]
+                summary[f'avg_{metric_name}'] = np.mean(values)
+                summary[f'std_{metric_name}'] = np.std(values)
+                summary[f'min_{metric_name}'] = np.min(values)
+                summary[f'max_{metric_name}'] = np.max(values)
+            
+            # Calculate average performance metrics
+            for perf_name in successful_results[0].performance.keys():
+                values = [r.performance[perf_name] for r in successful_results]
+                summary[f'avg_{perf_name}'] = np.mean(values)
+                summary[f'std_{perf_name}'] = np.std(values)
+                summary[f'total_{perf_name}'] = np.sum(values)
+        
+        # Add metadata
+        summary['total_samples'] = len(results)
+        summary['successful_samples'] = len(successful_results)
+        summary['success_rate'] = len(successful_results) / len(results) if results else 0.0
+        
+        return {
+            'task': task,
+            'implementation': implementation,
+            'data_length': data_length,
+            'results': results,
+            'summary': summary,
+            'success': True,
+            'error_message': ""
+        }
+        
+    except Exception as e:
+        log.error(f"Error running specific benchmark: {e}")
+        log.error(f"Traceback: {traceback.format_exc()}")
+        return {
+            'task': task,
+            'implementation': implementation,
+            'data_length': data_length,
+            'results': [],
+            'summary': {},
+            'success': False,
+            'error_message': f"{str(e)}\n{traceback.format_exc()}"
+        }
+
+
+def print_benchmark_results(benchmark_result: Dict[str, Any]):
+    """
+    Print benchmark results in a formatted way.
+    
+    Args:
+        benchmark_result: Result dictionary from run_specific_benchmark
+    """
+    print("\n" + "="*80)
+    print(f"BENCHMARK RESULTS: {benchmark_result['task'].upper()} - {benchmark_result['implementation'].upper()}")
+    print("="*80)
+    
+    print(f"Data Length: {benchmark_result['data_length']}")
+    print(f"Success: {benchmark_result['success']}")
+    
+    if not benchmark_result['success']:
+        print(f"Error: {benchmark_result['error_message']}")
+        return
+    
+    # Print summary statistics
+    summary = benchmark_result['summary']
+    if summary:
+        print(f"\nSUMMARY STATISTICS:")
+        print("-" * 40)
+        print(f"Total Samples: {summary.get('total_samples', 0)}")
+        print(f"Successful Samples: {summary.get('successful_samples', 0)}")
+        print(f"Success Rate: {summary.get('success_rate', 0):.2%}")
+        
+        # Print metrics
+        print(f"\nMETRICS:")
+        print("-" * 20)
+        for key, value in summary.items():
+            if key.startswith('avg_') and not key.startswith('avg_perf_'):
+                metric_name = key[4:]  # Remove 'avg_' prefix
+                std_key = f'std_{metric_name}'
+                min_key = f'min_{metric_name}'
+                max_key = f'max_{metric_name}'
+                
+                print(f"{metric_name}:")
+                print(f"  Average: {value:.4f}")
+                if std_key in summary:
+                    print(f"  Std Dev: {summary[std_key]:.4f}")
+                if min_key in summary:
+                    print(f"  Min: {summary[min_key]:.4f}")
+                if max_key in summary:
+                    print(f"  Max: {summary[max_key]:.4f}")
+        
+        # Print performance metrics
+        print(f"\nPERFORMANCE:")
+        print("-" * 20)
+        for key, value in summary.items():
+            if key.startswith('avg_perf_'):
+                perf_name = key[9:]  # Remove 'avg_perf_' prefix
+                total_key = f'total_perf_{perf_name}'
+                
+                print(f"{perf_name}:")
+                print(f"  Average: {value:.4f}s")
+                if total_key in summary:
+                    print(f"  Total: {summary[total_key]:.4f}s")
+
+
 def test_imports(max_samples: int = 100):
     """Test if all imports are working correctly."""
     print("Testing imports...")
@@ -671,5 +963,48 @@ def run_full_benchmark(max_samples: int = 100):
 if __name__ == "__main__":
     # Test imports first
     if test_imports():
-        # Run full benchmark
+        # Example usage of the new specific benchmark function
+        print("\n" + "="*80)
+        print("EXAMPLE: Running specific benchmark")
+        print("="*80)
+        
+        # Example 1: Test ADU identification with OpenAI on 10 samples
+        try:
+            result1 = run_specific_benchmark(
+                task='adu_identification',
+                implementation='openai',
+                data_length=10
+            )
+            print_benchmark_results(result1)
+        except Exception as e:
+            print(f"Example 1 failed: {e}")
+        
+        # Example 2: Test ADU classification with OpenAI on 10 samples
+        try:
+            result2 = run_specific_benchmark(
+                task='adu_classification',
+                implementation='openai',
+                data_length=10
+            )
+            print_benchmark_results(result2)
+        except Exception as e:
+            print(f"Example 2 failed: {e}")
+        
+        # Example 3: Test stance classification with TinyLlama on 5 samples
+        try:
+            result3 = run_specific_benchmark(
+                task='stance_classification',
+                implementation='tinyllama',
+                data_length=5
+            )
+            print_benchmark_results(result3)
+        except Exception as e:
+            print(f"Example 3 failed: {e}")
+        
+
+        
+        # Run full benchmark as before
+        print("\n" + "="*80)
+        print("Running full benchmark...")
+        print("="*80)
         print(run_full_benchmark())
