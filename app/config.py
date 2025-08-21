@@ -5,6 +5,9 @@ Centralizes submodule paths and other configuration settings.
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
+
 
 
 class Config:
@@ -13,10 +16,12 @@ class Config:
     # Project root directory
     PROJECT_ROOT = Path(__file__).parent.parent
     
+    load_dotenv(PROJECT_ROOT / ".env")
+
     # External submodule paths
     EXTERNAL_DIR = PROJECT_ROOT / "external"
-    ARGUMENT_MINING_API_PATH = EXTERNAL_DIR / "argument-mining-api"
-    ARGUMENT_MINING_DB_PATH = EXTERNAL_DIR / "argument-mining-db"
+    ARGUMENT_MINING_API_PATH = EXTERNAL_DIR / "api"
+    ARGUMENT_MINING_DB_PATH = EXTERNAL_DIR / "db"
     
     # Local component paths
     DB_CONNECTOR_PATH = PROJECT_ROOT / "app" / "db_connector"

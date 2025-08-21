@@ -43,13 +43,9 @@ from datetime import datetime
 
 warnings.filterwarnings('ignore')
 
-# Add project root to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-# Add external submodules to Python path
-external_api = project_root / "external" / "api"
-external_db = project_root / "external" / "db"
+# Add external submodules to Python path FIRST (before project root)
+external_api = Path(__file__).parent.parent / "external" / "api"
+external_db = Path(__file__).parent.parent / "external" / "db"
 
 if external_api.exists():
     sys.path.insert(0, str(external_api))
@@ -63,30 +59,35 @@ if external_db.exists():
 else:
     print(f"⚠️  argument-mining-db not found at: {external_db}")
 
+# Add project root to path AFTER external submodules (but only if needed for other imports)
+project_root = Path(__file__).parent.parent
+# Don't add project root to sys.path as it conflicts with external API imports
+# sys.path.insert(0, str(project_root))
+
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# Import argument mining components from external API
+# Import argument mining components from local bridge module
 try:
-    from app.argmining.interfaces.adu_and_stance_classifier import AduAndStanceClassifier
-    from app.argmining.interfaces.claim_premise_linker import ClaimPremiseLinker
-    from app.argmining.models.argument_units import (
-        ArgumentUnit, 
-        UnlinkedArgumentUnits, 
-        LinkedArgumentUnits, 
+    # Import all necessary classes from the local argmining module
+    from app.argmining import (
+        AduAndStanceClassifier,
+        ClaimPremiseLinker,
+        ArgumentUnit,
+        UnlinkedArgumentUnits,
+        LinkedArgumentUnits,
         LinkedArgumentUnitsWithStance,
         StanceRelation,
-        ClaimPremiseRelationship
-    )
-    from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
-    from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
-    from app.argmining.implementations.encoder_model_loader import (
-        PeftEncoderModelLoader, 
+        ClaimPremiseRelationship,
+        OpenAILLMClassifier,
+        TinyLLamaLLMClassifier,
+        PeftEncoderModelLoader,
         NonTrainedEncoderModelLoader,
-        MODEL_CONFIGS
+        MODEL_CONFIGS,
+        OpenAIClaimPremiseLinker
     )
-    from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
+    
     print("✓ Successfully imported argument mining components from external API")
 except ImportError as e:
     print(f"❌ Error importing argument mining components: {e}")
