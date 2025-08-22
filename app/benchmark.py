@@ -40,15 +40,23 @@ warnings.filterwarnings('ignore')
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Add external API app to path to resolve imports
+external_api_app = project_root / "external" / "argument-mining-api" / "app"
+sys.path.insert(0, str(external_api_app))
+
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
 
-# Import argument mining components
+# Also check for OPENAI_API_KEY and set OPEN_AI_KEY if needed
+import os
+if os.getenv('OPENAI_API_KEY') and not os.getenv('OPEN_AI_KEY'):
+    os.environ['OPEN_AI_KEY'] = os.getenv('OPENAI_API_KEY')
 
-from app.argmining.interfaces.adu_and_stance_classifier import AduAndStanceClassifier
-from app.argmining.interfaces.claim_premise_linker import ClaimPremiseLinker
-from app.argmining.models.argument_units import (
+# Import argument mining components from external package
+from argmining.interfaces.adu_and_stance_classifier import AduAndStanceClassifier
+from argmining.interfaces.claim_premise_linker import ClaimPremiseLinker
+from argmining.models.argument_units import (
     ArgumentUnit, 
     UnlinkedArgumentUnits, 
     LinkedArgumentUnits, 
@@ -56,22 +64,27 @@ from app.argmining.models.argument_units import (
     StanceRelation,
     ClaimPremiseRelationship
 )
-from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
-from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
-from app.argmining.implementations.encoder_model_loader import (
+from argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
+from argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
+from argmining.implementations.encoder_model_loader import (
     PeftEncoderModelLoader, 
     NonTrainedEncoderModelLoader,
     MODEL_CONFIGS
 )
-from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
-print("✓ Successfully imported argument mining components")
+from argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
+print("Successfully imported argument mining components")
+
+# Add external DB to path
+external_db_path = project_root / "external" / "argument-mining-db"
+if str(external_db_path) not in sys.path:
+    sys.path.insert(0, str(external_db_path))
 
 # Import database components
 try:
-    from app.db_connector.db.queries import get_benchmark_data_for_evaluation
-    print("✓ Successfully imported database components")
+    from db.queries import get_benchmark_data
+    print("Successfully imported database components")
 except ImportError as e:
-    print(f"❌ Error importing database components: {e}")
+    print(f"Error importing database components: {e}")
     print(f"Traceback: {traceback.format_exc()}")
     sys.exit(1)
 
@@ -123,7 +136,7 @@ class ArgumentMiningBenchmark:
         if not openai_key:
             log.warning("OPEN_AI_KEY environment variable not set. OpenAI implementations may fail.")
         else:
-            log.info("✓ OPEN_AI_KEY environment variable found")
+            log.info("OPEN_AI_KEY environment variable found")
     
     def _initialize_implementations(self):
         """Initialize all available implementations."""
@@ -136,7 +149,7 @@ class ArgumentMiningBenchmark:
                     'adu_classifier': OpenAILLMClassifier(),
                     'linker': OpenAIClaimPremiseLinker()
                 }
-                log.info("✓ Initialized OpenAI implementation")
+                log.info("Initialized OpenAI implementation")
             except Exception as e:
                 log.error(f"Failed to initialize OpenAI implementation: {e}")
                 log.error(f"Traceback: {traceback.format_exc()}")
@@ -147,7 +160,7 @@ class ArgumentMiningBenchmark:
                     'adu_classifier': TinyLLamaLLMClassifier(),
                     'linker': None  # TinyLlama doesn't have linking
                 }
-                log.info("✓ Initialized TinyLlama implementation")
+                log.info("Initialized TinyLlama implementation")
             except Exception as e:
                 log.error(f"Failed to initialize TinyLlama implementation: {e}")
                 log.error(f"Traceback: {traceback.format_exc()}")
@@ -160,7 +173,7 @@ class ArgumentMiningBenchmark:
                         'adu_classifier': PeftEncoderModelLoader(**modernbert_config['params']),
                         'linker': None
                     }
-                    log.info("✓ Initialized ModernBERT implementation")
+                    log.info("Initialized ModernBERT implementation")
             except Exception as e:
                 log.error(f"Failed to initialize ModernBERT implementation: {e}")
                 log.error(f"Traceback: {traceback.format_exc()}")
@@ -169,11 +182,14 @@ class ArgumentMiningBenchmark:
             try:
                 deberta_config = MODEL_CONFIGS.get('deberta')
                 if deberta_config:
-                    implementations['deberta'] = {
-                        'adu_classifier': NonTrainedEncoderModelLoader(**deberta_config['params']),
-                        'linker': None
-                    }
-                    log.info("✓ Initialized DeBERTa implementation")
+                    # Extract just the model_paths from params
+                    model_paths = deberta_config['params'].get('model_paths')
+                    if model_paths:
+                        implementations['deberta'] = {
+                            'adu_classifier': NonTrainedEncoderModelLoader(model_paths=model_paths),
+                            'linker': None
+                        }
+                        log.info("Initialized DeBERTa implementation")
             except Exception as e:
                 log.error(f"Failed to initialize DeBERTa implementation: {e}")
                 log.error(f"Traceback: {traceback.format_exc()}")
@@ -187,7 +203,21 @@ class ArgumentMiningBenchmark:
     def _load_benchmark_data(self):
         """Load benchmark data from database."""
         try:
-            self.data = get_benchmark_data_for_evaluation(self.max_samples)
+            # Get benchmark data - returns (claims, premises, topics)
+            claims, premises, topics = get_benchmark_data()
+            # Convert to dictionary format expected by benchmark functions
+            self.data = []
+            for i in range(min(self.max_samples, len(claims))):
+                sample = {
+                    'text': claims[i].text if hasattr(claims[i], 'text') else str(claims[i]),
+                    'ground_truth': {
+                        'adus': [],  # TODO: Extract ADUs from claims/premises
+                        'stance': 'pro',  # TODO: Get actual stance
+                        'links': [],  # TODO: Get actual links
+                        'relationships': []  # Added for claim-premise linking benchmark
+                    }
+                }
+                self.data.append(sample)
             log.info(f"Loaded {len(self.data)} benchmark samples (requested: {self.max_samples})")
         except Exception as e:
             log.error(f"Failed to load benchmark data: {e}")
@@ -588,12 +618,12 @@ def test_imports(max_samples: int = 100):
     
     try:
         benchmark = ArgumentMiningBenchmark(max_samples=max_samples)
-        print("✓ Benchmark class created successfully")
+        print("Benchmark class created successfully")
         print(f"  - Loaded {len(benchmark.data)} samples (requested: {max_samples})")
         print(f"  - Available implementations: {list(benchmark.implementations.keys())}")
         return True
     except Exception as e:
-        print(f"❌ Failed to create benchmark: {e}")
+        print(f"Failed to create benchmark: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return False
 
@@ -603,10 +633,10 @@ def run_full_benchmark(max_samples: int = 100):
     try:
         benchmark = ArgumentMiningBenchmark(max_samples=max_samples)
         results = benchmark.run_benchmark()
-        print("✓ Benchmark completed successfully")
+        print("Benchmark completed successfully")
         return results
     except Exception as e:
-        print(f"❌ Benchmark failed: {e}")
+        print(f"Benchmark failed: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return None
 

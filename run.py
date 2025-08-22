@@ -21,11 +21,11 @@ def main(max_samples: int = 0, quick: bool = False):
     # If quick mode is enabled, override max_samples
     if args.quick or quick:
         max_samples = 10
-        print("🚀 Running in quick mode with 10 samples")
+        print("Running in quick mode with 10 samples")
     else:
         if max_samples is None:
             max_samples = args.max_samples
-        print(f"🚀 Running benchmark with {max_samples} samples")
+        print(f"Running benchmark with {max_samples} samples")
     
     run_full_benchmark(max_samples=max_samples)
 
