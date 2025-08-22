@@ -22,6 +22,11 @@ If you already cloned without submodules:
 git submodule update --init --recursive
 ```
 
+To update submodules to the latest version from their main branches:
+```bash
+git submodule update --remote --merge
+```
+
 ### 2. Create a virtual environment (recommended)
 
 ```bash
