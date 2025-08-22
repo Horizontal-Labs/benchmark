@@ -71,8 +71,19 @@ OPENAI_API_KEY=your-api-key-here
 # HuggingFace token (optional, for private models)
 HF_TOKEN=your-hf-token-here
 
-# Database configuration (if using the database)
-DATABASE_URL=mysql+pymysql://user:password@localhost/dbname
+# Database configuration (optional - uses cached data if not provided)
+# Option 1: Use a complete database URL
+DATABASE_URL=mysql+pymysql://user:password@localhost:3306/dbname
+
+# Option 2: Or configure individual components
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=argument-mining
+DB_USER=your-username
+DB_PASSWORD=your-password
+
+# Cache configuration (optional, defaults to True)
+CACHE_ENABLED=True
 ```
 
 **Important:** The `.env` file must be placed in the benchmark root directory (where `run.py` is located), not in any subdirectory.

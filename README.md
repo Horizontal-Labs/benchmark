@@ -82,9 +82,20 @@ Modify `run.py` to customize:
 Create a `.env` file in the benchmark root directory:
 
 ```env
+# Required for OpenAI models
 OPENAI_API_KEY=your-api-key-here
-HF_TOKEN=your-huggingface-token  # Optional
-DATABASE_URL=mysql+pymysql://...  # Optional
+
+# Optional: HuggingFace private models
+HF_TOKEN=your-huggingface-token
+
+# Optional: Database connection (defaults to cached data)
+DATABASE_URL=mysql+pymysql://user:password@host:port/dbname
+# Or use individual variables:
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_NAME=argument-mining
+# DB_USER=username
+# DB_PASSWORD=password
 ```
 
 ## Submodules
