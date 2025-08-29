@@ -103,7 +103,14 @@ class TestOpenAIAPI:
     def test_openai_llm_classifier_initialization(self):
         """Test that the OpenAI LLM classifier can be initialized with valid API key."""
         try:
-            from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
+            import sys
+            import os
+            # Add the external app directory to the path
+            external_app_path = os.path.join(os.path.dirname(__file__), '..', 'external', 'argument-mining-api', 'app')
+            if external_app_path not in sys.path:
+                sys.path.insert(0, external_app_path)
+            
+            from argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
             
             # Initialize the classifier
             classifier = OpenAILLMClassifier()
@@ -121,7 +128,14 @@ class TestOpenAIAPI:
     def test_openai_llm_classifier_simple_classification(self):
         """Test that the OpenAI LLM classifier can perform a simple classification."""
         try:
-            from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
+            import sys
+            import os
+            # Add the external app directory to the path
+            external_app_path = os.path.join(os.path.dirname(__file__), '..', 'external', 'argument-mining-api', 'app')
+            if external_app_path not in sys.path:
+                sys.path.insert(0, external_app_path)
+            
+            from argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
             
             # Initialize the classifier
             classifier = OpenAILLMClassifier()
