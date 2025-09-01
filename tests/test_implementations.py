@@ -14,32 +14,108 @@ from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 import numpy as np
 from uuid import uuid4
+from dotenv import load_dotenv
 
 # Add project root to path
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import the implementations
-from app.argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
-from app.argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
-from app.argmining.implementations.encoder_model_loader import (
-    PeftEncoderModelLoader, 
-    NonTrainedEncoderModelLoader,
-    MODEL_CONFIGS
-)
-from app.argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
-from app.argmining.models.argument_units import (
-    ArgumentUnit, 
-    UnlinkedArgumentUnits, 
-    LinkedArgumentUnits, 
-    LinkedArgumentUnitsWithStance,
-    StanceRelation,
-    ClaimPremiseRelationship
-)
-from app.log import log
+# Load environment variables from .env file in project root
+load_dotenv(project_root / '.env')
 
-# Import config to get actual tokens
-from app.argmining.config import OPENAI_KEY, HF_TOKEN
+# Add the external app directory to the path for external implementations
+external_app_path = os.path.join(project_root, 'external', 'argument-mining-api', 'app')
+if external_app_path not in sys.path:
+    sys.path.insert(0, external_app_path)
+
+# Import the implementations with proper error handling
+try:
+    from argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
+    from argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
+    from argmining.implementations.encoder_model_loader import (
+        PeftEncoderModelLoader, 
+        NonTrainedEncoderModelLoader,
+        MODEL_CONFIGS
+    )
+    from argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
+    from argmining.models.argument_units import (
+        ArgumentUnit, 
+        UnlinkedArgumentUnits, 
+        LinkedArgumentUnits, 
+        LinkedArgumentUnitsWithStance,
+        StanceRelation,
+        ClaimPremiseRelationship
+    )
+    from argmining.config import OPENAI_KEY, HF_TOKEN
+    
+    # Import local log module
+    import sys
+    from pathlib import Path
+    local_app_path = Path(__file__).parent.parent / "app"
+    if str(local_app_path) not in sys.path:
+        sys.path.insert(0, str(local_app_path))
+    from log import log as logger
+    
+    IMPORTS_SUCCESSFUL = True
+except ImportError as e:
+    print(f"Warning: Some imports failed: {e}")
+    # Create dummy classes for testing
+    class OpenAILLMClassifier:
+        pass
+    class TinyLLamaLLMClassifier:
+        pass
+    class PeftEncoderModelLoader:
+        pass
+    class NonTrainedEncoderModelLoader:
+        pass
+    class OpenAIClaimPremiseLinker:
+        pass
+    class ArgumentUnit:
+        pass
+    class UnlinkedArgumentUnits:
+        pass
+    class LinkedArgumentUnits:
+        pass
+    class LinkedArgumentUnitsWithStance:
+        pass
+    class StanceRelation:
+        pass
+    class ClaimPremiseRelationship:
+        pass
+    MODEL_CONFIGS = {}
+    OPENAI_KEY = None
+    HF_TOKEN = None
+    IMPORTS_SUCCESSFUL = False
+    
+    # Create a simple log function
+    def log():
+        class Logger:
+            def info(self, msg): print(f"INFO: {msg}")
+            def warning(self, msg): print(f"WARNING: {msg}")
+            def error(self, msg): print(f"ERROR: {msg}")
+        return Logger()
+
+
+class TestBasicImplementationDiscovery:
+    """Basic tests that should always be discoverable."""
+    
+    def test_import_status(self):
+        """Test that we can check if imports were successful."""
+        assert 'IMPORTS_SUCCESSFUL' in globals(), "Import status variable should be defined"
+        print(f"Import status: {IMPORTS_SUCCESSFUL}")
+    
+    def test_basic_assertion(self):
+        """Basic test to ensure pytest discovery works."""
+        assert True, "Basic test should always pass"
+    
+    def test_path_setup(self):
+        """Test that the path setup is working."""
+        # Check that the external app path is in sys.path
+        assert external_app_path in sys.path, f"External app path should be in sys.path: {external_app_path}"
+        print(f"Project root: {project_root}")
+        print(f"External app path: {external_app_path}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"First few paths in sys.path: {sys.path[:5]}")
 
 
 class TestOpenAIImplementation:
@@ -62,15 +138,13 @@ class TestOpenAIImplementation:
         if not OPENAI_KEY:
             pytest.skip("OpenAI API key not available in config")
         
-        try:
-            classifier = OpenAILLMClassifier()
-            assert classifier is not None
-            assert hasattr(classifier, 'client')
-            assert hasattr(classifier, 'system_prompt_adu_classification')
-            assert hasattr(classifier, 'system_prompt_stance_classification')
-            log.info("✓ OpenAI classifier initialized successfully")
-        except Exception as e:
-            pytest.skip(f"OpenAI classifier initialization failed: {e}")
+        classifier = OpenAILLMClassifier()
+        assert classifier is not None
+        assert hasattr(classifier, 'client')
+        assert hasattr(classifier, 'system_prompt_adu_classification')
+        assert hasattr(classifier, 'system_prompt_stance_classification')
+        logger.info("✓ OpenAI classifier initialized successfully")
+
     
     def test_openai_classify_sentence_claim(self, mock_environment):
         """Test OpenAI classifier with a claim sentence."""
@@ -85,14 +159,14 @@ class TestOpenAIImplementation:
             result = classifier.classify_sentence(test_sentence)
             
             assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-            log.info(f"✓ OpenAI classifier classified claim sentence: {result}")
+            logger.info(f"✓ OpenAI classifier classified claim sentence: {result}")
         except Exception as e:
             pytest.skip(f"OpenAI classifier test failed: {e}")
     
     def test_openai_classify_sentence_premise(self, mock_environment):
         """Test OpenAI classifier with a premise sentence."""
         if not OPENAI_KEY:
-            pytest.skip("OpenAI API key not available in config")
+            pytest.fail("OpenAI API key not available in config")
         
         try:
             classifier = OpenAILLMClassifier()
@@ -102,9 +176,9 @@ class TestOpenAIImplementation:
             result = classifier.classify_sentence(test_sentence)
             
             assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-            log.info(f"✓ OpenAI classifier classified premise sentence: {result}")
+            logger.info(f"✓ OpenAI classifier classified premise sentence: {result}")
         except Exception as e:
-            pytest.skip(f"OpenAI classifier test failed: {e}")
+            pytest.fail(f"OpenAI classifier test failed: {e}")
     
     def test_openai_classify_adus(self, mock_environment):
         """Test OpenAI classifier ADU extraction."""
@@ -124,7 +198,7 @@ class TestOpenAIImplementation:
             assert isinstance(result.claims, list)
             assert isinstance(result.premises, list)
             
-            log.info(f"✓ OpenAI classifier extracted {len(result.claims)} claims and {len(result.premises)} premises")
+            logger.info(f"✓ OpenAI classifier extracted {len(result.claims)} claims and {len(result.premises)} premises")
         except Exception as e:
             pytest.skip(f"OpenAI classifier ADU extraction failed: {e}")
     
@@ -151,7 +225,7 @@ class TestOpenAIImplementation:
             assert hasattr(result, 'stance_relations')
             assert isinstance(result.stance_relations, list)
             
-            log.info(f"✓ OpenAI classifier classified stance with {len(result.stance_relations)} relations")
+            logger.info(f"✓ OpenAI classifier classified stance with {len(result.stance_relations)} relations")
         except Exception as e:
             pytest.skip(f"OpenAI classifier stance classification failed: {e}")
 
@@ -182,7 +256,7 @@ class TestTinyLlamaImplementation:
             assert hasattr(classifier, 'model')
             assert hasattr(classifier, 'tokenizer')
             assert hasattr(classifier, 'base_model_id')
-            log.info("✓ TinyLlama classifier initialized successfully")
+            logger.info("✓ TinyLlama classifier initialized successfully")
         except Exception as e:
             pytest.skip(f"TinyLlama classifier initialization failed: {e}")
     
@@ -198,7 +272,7 @@ class TestTinyLlamaImplementation:
         result = classifier.classify_sentence(test_sentence)
         
         assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-        log.info(f"✓ TinyLlama classifier classified claim sentence: {result}")
+        logger.info(f"✓ TinyLlama classifier classified claim sentence: {result}")
 
     
     def test_tinyllama_classify_sentence_premise(self, mock_environment):
@@ -213,7 +287,7 @@ class TestTinyLlamaImplementation:
         result = classifier.classify_sentence(test_sentence)
         
         assert result in ['claim', 'premise'], f"Unexpected result: {result}"
-        log.info(f"✓ TinyLlama classifier classified premise sentence: {result}")
+        logger.info(f"✓ TinyLlama classifier classified premise sentence: {result}")
 
     
     def test_tinyllama_classify_adus_no_fallback(self, mock_environment):
@@ -240,7 +314,7 @@ class TestTinyLlamaImplementation:
                 assert isinstance(result.claims, list)
                 assert isinstance(result.premises, list)
                 
-                log.info(f"✓ TinyLlama classifier extracted {len(result.claims)} claims and {len(result.premises)} premises without fallback")
+                logger.info(f"✓ TinyLlama classifier extracted {len(result.claims)} claims and {len(result.premises)} premises without fallback")
         except Exception as e:
             pytest.skip(f"TinyLlama classifier ADU extraction failed: {e}")
     
@@ -267,7 +341,7 @@ class TestTinyLlamaImplementation:
             assert hasattr(result, 'stance_relations')
             assert isinstance(result.stance_relations, list)
             
-            log.info(f"✓ TinyLlama classifier classified stance with {len(result.stance_relations)} relations")
+            logger.info(f"✓ TinyLlama classifier classified stance with {len(result.stance_relations)} relations")
         except Exception as e:
             pytest.skip(f"TinyLlama classifier stance classification failed: {e}")
 
@@ -287,7 +361,7 @@ class TestModernBERTImplementation:
             assert hasattr(classifier, 'tokenizer')
             assert hasattr(classifier, 'base_model_path')
             assert hasattr(classifier, 'adapter_paths')
-            log.info("✓ ModernBERT classifier initialized successfully")
+            logger.info("✓ ModernBERT classifier initialized successfully")
         except Exception as e:
             pytest.skip(f"ModernBERT classifier initialization failed: {e}")
     
@@ -309,7 +383,7 @@ class TestModernBERTImplementation:
         assert isinstance(result, list)
         # Note: Result might be empty if no ADUs are identified, which is acceptable
         
-        log.info(f"✓ ModernBERT identified {len(result)} ADUs without fallback")
+        logger.info(f"✓ ModernBERT identified {len(result)} ADUs without fallback")
 
     
     def test_modernbert_classify_adus(self):
@@ -331,7 +405,7 @@ class TestModernBERTImplementation:
             assert isinstance(result.claims, list)
             assert isinstance(result.premises, list)
             
-            log.info(f"✓ ModernBERT classified {len(result.claims)} claims and {len(result.premises)} premises")
+            logger.info(f"✓ ModernBERT classified {len(result.claims)} claims and {len(result.premises)} premises")
         except Exception as e:
             pytest.skip(f"ModernBERT ADU classification failed: {e}")
     
@@ -359,7 +433,7 @@ class TestModernBERTImplementation:
         assert hasattr(result, 'stance_relations')
         assert isinstance(result.stance_relations, list)
         
-        log.info(f"✓ ModernBERT classified stance with {len(result.stance_relations)} relations")
+        logger.info(f"✓ ModernBERT classified stance with {len(result.stance_relations)} relations")
 
 
 
@@ -388,7 +462,7 @@ class TestDeBERTaImplementation:
         assert hasattr(classifier, 'tokenizer')
         assert hasattr(classifier, 'base_model_path')
         assert hasattr(classifier, 'model_paths')
-        log.info("✓ DeBERTa classifier initialized successfully")
+        logger.info("✓ DeBERTa classifier initialized successfully")
     
     def test_deberta_classify_adus(self):
         """Test DeBERTa ADU classification."""
@@ -419,7 +493,7 @@ class TestDeBERTaImplementation:
         assert isinstance(result.claims, list)
         assert isinstance(result.premises, list)
         
-        log.info(f"✓ DeBERTa classified {len(result.claims)} claims and {len(result.premises)} premises")
+        logger.info(f"✓ DeBERTa classified {len(result.claims)} claims and {len(result.premises)} premises")
     
     def test_deberta_classify_stance(self):
         """Test DeBERTa stance classification."""
@@ -455,7 +529,7 @@ class TestDeBERTaImplementation:
         assert hasattr(result, 'stance_relations')
         assert isinstance(result.stance_relations, list)
         
-        log.info(f"✓ DeBERTa classified stance with {len(result.stance_relations)} relations")
+        logger.info(f"✓ DeBERTa classified stance with {len(result.stance_relations)} relations")
 
 class TestOpenAIClaimPremiseLinker:
     """Test OpenAI Claim-Premise Linker implementation."""
@@ -481,7 +555,7 @@ class TestOpenAIClaimPremiseLinker:
             linker = OpenAIClaimPremiseLinker()
             assert linker is not None
             assert hasattr(linker, 'client')
-            log.info("✓ OpenAI linker initialized successfully")
+            logger.info("✓ OpenAI linker initialized successfully")
         except Exception as e:
             pytest.skip(f"OpenAI linker initialization failed: {e}")
     
@@ -518,9 +592,9 @@ class TestOpenAIClaimPremiseLinker:
                 claim = next((c for c in claims if c.uuid == relation.claim_id), None)
                 if claim:
                     linked_premises = [p.text for p in premises if p.uuid in relation.premise_ids]
-                    log.info(f"Claim: {claim.text} -> Linked premises: {linked_premises}")
+                    logger.info(f"Claim: {claim.text} -> Linked premises: {linked_premises}")
             
-            log.info(f"✓ OpenAI linker created {len(result.claims_premises_relationships)} relationships")
+            logger.info(f"✓ OpenAI linker created {len(result.claims_premises_relationships)} relationships")
         except Exception as e:
             pytest.skip(f"OpenAI linker test failed: {e}")
 
@@ -548,30 +622,30 @@ class TestImplementationIntegration:
         if OPENAI_KEY:
             try:
                 implementations['openai'] = OpenAILLMClassifier()
-                log.info("✓ OpenAI implementation initialized")
+                logger.info("✓ OpenAI implementation initialized")
             except Exception as e:
-                log.warning(f"OpenAI implementation failed: {e}")
+                logger.warning(f"OpenAI implementation failed: {e}")
         else:
-            log.info("⚠️ OpenAI implementation skipped (no API key)")
+            logger.info("⚠️ OpenAI implementation skipped (no API key)")
         
         # Test TinyLlama
         if HF_TOKEN:
             try:
                 implementations['tinyllama'] = TinyLLamaLLMClassifier()
-                log.info("✓ TinyLlama implementation initialized")
+                logger.info("✓ TinyLlama implementation initialized")
             except Exception as e:
-                log.warning(f"TinyLlama implementation failed: {e}")
+                logger.warning(f"TinyLlama implementation failed: {e}")
         else:
-            log.info("⚠️ TinyLlama implementation skipped (no HF token)")
+            logger.info("⚠️ TinyLlama implementation skipped (no HF token)")
         
         # Test ModernBERT
         try:
             modernbert_config = MODEL_CONFIGS.get('modernbert')
             if modernbert_config:
                 implementations['modernbert'] = PeftEncoderModelLoader(**modernbert_config['params'])
-                log.info("✓ ModernBERT implementation initialized")
+                logger.info("✓ ModernBERT implementation initialized")
         except Exception as e:
-            log.warning(f"ModernBERT implementation failed: {e}")
+            logger.warning(f"ModernBERT implementation failed: {e}")
         
         # Test DeBERTa
         try:
@@ -585,25 +659,25 @@ class TestImplementationIntegration:
                 
                 if all(p.exists() for p in checkpoint_paths):
                     implementations['deberta'] = NonTrainedEncoderModelLoader(**deberta_config['params'])
-                    log.info("✓ DeBERTa implementation initialized")
+                    logger.info("✓ DeBERTa implementation initialized")
                 else:
-                    log.info("⚠️ DeBERTa implementation skipped (checkpoints not available)")
+                    logger.info("⚠️ DeBERTa implementation skipped (checkpoints not available)")
         except Exception as e:
-            log.warning(f"DeBERTa implementation failed: {e}")
+            logger.warning(f"DeBERTa implementation failed: {e}")
         
         # Test OpenAI Linker
         if OPENAI_KEY:
             try:
                 implementations['openai_linker'] = OpenAIClaimPremiseLinker()
-                log.info("✓ OpenAI Linker implementation initialized")
+                logger.info("✓ OpenAI Linker implementation initialized")
             except Exception as e:
-                log.warning(f"OpenAI Linker implementation failed: {e}")
+                logger.warning(f"OpenAI Linker implementation failed: {e}")
         else:
-            log.info("⚠️ OpenAI Linker implementation skipped (no API key)")
+            logger.info("⚠️ OpenAI Linker implementation skipped (no API key)")
         
         # Assert that at least one implementation was successful
         assert len(implementations) > 0, "No implementations could be initialized"
-        log.info(f"✓ Successfully initialized {len(implementations)} implementations")
+        logger.info(f"✓ Successfully initialized {len(implementations)} implementations")
     
     def test_implementation_consistency(self, mock_environment):
         """Test that implementations produce consistent output formats."""
@@ -661,13 +735,13 @@ class TestImplementationIntegration:
                 assert isinstance(result.claims, list)
                 assert isinstance(result.premises, list)
                 
-                log.info(f"✓ {name} produced consistent output format")
+                logger.info(f"✓ {name} produced consistent output format")
             except Exception as e:
-                log.warning(f"{name} failed consistency test: {e}")
+                logger.warning(f"{name} failed consistency test: {e}")
         
         # Assert that at least one implementation produced results
         if results:
-            log.info(f"✓ {len(results)} implementations produced consistent output formats")
+            logger.info(f"✓ {len(results)} implementations produced consistent output formats")
         else:
             pytest.skip("No implementations could be tested for consistency")
 

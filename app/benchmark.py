@@ -31,10 +31,17 @@ from dataclasses import dataclass
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 import warnings
 import traceback
-from app.log import log
 from datetime import datetime
 
 warnings.filterwarnings('ignore')
+
+# Import local log module first - before any path modifications
+import sys
+from pathlib import Path
+local_app_path = Path(__file__).parent
+if str(local_app_path) not in sys.path:
+    sys.path.insert(0, str(local_app_path))
+from log import log as logger
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
@@ -127,16 +134,16 @@ class ArgumentMiningBenchmark:
         # Load benchmark data
         self._load_benchmark_data()
         
-        log.info(f"Initialized benchmark with {len(self.data)} samples (max_samples: {self.max_samples})")
-        log.info(f"Available implementations: {list(self.implementations.keys())}")
+        logger.info(f"Initialized benchmark with {len(self.data)} samples (max_samples: {self.max_samples})")
+        logger.info(f"Available implementations: {list(self.implementations.keys())}")
     
     def _check_environment(self):
         """Check if required environment variables are set."""
         openai_key = os.getenv("OPEN_AI_KEY")
         if not openai_key:
-            log.warning("OPEN_AI_KEY environment variable not set. OpenAI implementations may fail.")
+            logger.warning("OPEN_AI_KEY environment variable not set. OpenAI implementations may fail.")
         else:
-            log.info("OPEN_AI_KEY environment variable found")
+            logger.info("OPEN_AI_KEY environment variable found")
     
     def _initialize_implementations(self):
         """Initialize all available implementations."""
@@ -149,10 +156,10 @@ class ArgumentMiningBenchmark:
                     'adu_classifier': OpenAILLMClassifier(),
                     'linker': OpenAIClaimPremiseLinker()
                 }
-                log.info("Initialized OpenAI implementation")
+                logger.info("Initialized OpenAI implementation")
             except Exception as e:
-                log.error(f"Failed to initialize OpenAI implementation: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Failed to initialize OpenAI implementation: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
             
             # TinyLlama implementation
             try:
@@ -160,10 +167,10 @@ class ArgumentMiningBenchmark:
                     'adu_classifier': TinyLLamaLLMClassifier(),
                     'linker': None  # TinyLlama doesn't have linking
                 }
-                log.info("Initialized TinyLlama implementation")
+                logger.info("Initialized TinyLlama implementation")
             except Exception as e:
-                log.error(f"Failed to initialize TinyLlama implementation: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Failed to initialize TinyLlama implementation: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
             
             # ModernBERT implementation
             try:
@@ -173,10 +180,10 @@ class ArgumentMiningBenchmark:
                         'adu_classifier': PeftEncoderModelLoader(**modernbert_config['params']),
                         'linker': None
                     }
-                    log.info("Initialized ModernBERT implementation")
+                    logger.info("Initialized ModernBERT implementation")
             except Exception as e:
-                log.error(f"Failed to initialize ModernBERT implementation: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Failed to initialize ModernBERT implementation: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
             
             # DeBERTa implementation
             try:
@@ -189,14 +196,14 @@ class ArgumentMiningBenchmark:
                             'adu_classifier': NonTrainedEncoderModelLoader(model_paths=model_paths),
                             'linker': None
                         }
-                        log.info("Initialized DeBERTa implementation")
+                        logger.info("Initialized DeBERTa implementation")
             except Exception as e:
-                log.error(f"Failed to initialize DeBERTa implementation: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Failed to initialize DeBERTa implementation: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
             
         except Exception as e:
-            log.error(f"Error initializing implementations: {e}")
-            log.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Error initializing implementations: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
         
         self.implementations = implementations
     
@@ -218,18 +225,68 @@ class ArgumentMiningBenchmark:
                     }
                 }
                 self.data.append(sample)
-            log.info(f"Loaded {len(self.data)} benchmark samples (requested: {self.max_samples})")
+            logger.info(f"Loaded {len(self.data)} benchmark samples (requested: {self.max_samples})")
         except Exception as e:
-            log.error(f"Failed to load benchmark data: {e}")
-            log.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Failed to load benchmark data: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.info("Attempting to load local CSV data as fallback...")
+            self._load_local_csv_data()
+    
+    def _load_local_csv_data(self):
+        """Load benchmark data from local CSV file as fallback."""
+        try:
+            csv_path = Path(__file__).parent.parent / "external" / "argument-mining-db" / "data" / "claim_stance_dataset_v1.csv"
+            if not csv_path.exists():
+                logger.error(f"Local CSV file not found at {csv_path}")
+                self.data = []
+                return
+            
+            # Load CSV data
+            df = pd.read_csv(csv_path)
+            logger.info(f"Loaded {len(df)} rows from local CSV file")
+            
+            # Convert to benchmark format
+            self.data = []
+            for i, row in df.head(self.max_samples).iterrows():
+                # Use the claim text as the main text
+                text = row.get('claims.claimCorrectedText', row.get('claims.claimOriginalText', ''))
+                if pd.isna(text) or not text.strip():
+                    continue
+                
+                # Determine stance from the data
+                stance = row.get('claims.stance', 'neutral')
+                if stance == 'PRO':
+                    stance = 'pro'
+                elif stance == 'CON':
+                    stance = 'con'
+                else:
+                    stance = 'neutral'
+                
+                # Create sample with basic ground truth
+                sample = {
+                    'text': text.strip(),
+                    'ground_truth': {
+                        'adus': [text.strip()],  # Treat the claim as an ADU
+                        'stance': stance,
+                        'links': [],
+                        'relationships': []
+                    }
+                }
+                self.data.append(sample)
+            
+            logger.info(f"Successfully loaded {len(self.data)} samples from local CSV (requested: {self.max_samples})")
+            
+        except Exception as e:
+            logger.error(f"Failed to load local CSV data: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             self.data = []
     
     def benchmark_adu_extraction(self, implementation_name: str) -> List[BenchmarkResult]:
         """Benchmark ADU extraction task."""
-        log.info(f"Benchmarking ADU extraction with {implementation_name}")
+        logger.info(f"Benchmarking ADU extraction with {implementation_name}")
         
         if implementation_name not in self.implementations:
-            log.warning(f"Implementation {implementation_name} not available")
+            logger.warning(f"Implementation {implementation_name} not available")
             return []
         
         classifier = self.implementations[implementation_name]['adu_classifier']
@@ -258,8 +315,8 @@ class ArgumentMiningBenchmark:
                 results.append(result)
                 
             except Exception as e:
-                log.error(f"Error processing sample {i} with {implementation_name}: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Error processing sample {i} with {implementation_name}: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 result = BenchmarkResult(
                     task_name='adu_extraction',
                     implementation_name=implementation_name,
@@ -277,10 +334,10 @@ class ArgumentMiningBenchmark:
     
     def benchmark_stance_classification(self, implementation_name: str) -> List[BenchmarkResult]:
         """Benchmark stance classification task."""
-        log.info(f"Benchmarking stance classification with {implementation_name}")
+        logger.info(f"Benchmarking stance classification with {implementation_name}")
         
         if implementation_name not in self.implementations:
-            log.warning(f"Implementation {implementation_name} not available")
+            logger.warning(f"Implementation {implementation_name} not available")
             return []
         
         classifier = self.implementations[implementation_name]['adu_classifier']
@@ -319,8 +376,8 @@ class ArgumentMiningBenchmark:
                 results.append(result)
                 
             except Exception as e:
-                log.error(f"Error processing sample {i} with {implementation_name}: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Error processing sample {i} with {implementation_name}: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 result = BenchmarkResult(
                     task_name='stance_classification',
                     implementation_name=implementation_name,
@@ -338,15 +395,15 @@ class ArgumentMiningBenchmark:
     
     def benchmark_claim_premise_linking(self, implementation_name: str) -> List[BenchmarkResult]:
         """Benchmark claim-premise linking task."""
-        log.info(f"Benchmarking claim-premise linking with {implementation_name}")
+        logger.info(f"Benchmarking claim-premise linking with {implementation_name}")
         
         if implementation_name not in self.implementations:
-            log.warning(f"Implementation {implementation_name} not available")
+            logger.warning(f"Implementation {implementation_name} not available")
             return []
         
         linker = self.implementations[implementation_name]['linker']
         if not linker:
-            log.warning(f"No linker available for {implementation_name}")
+            logger.warning(f"No linker available for {implementation_name}")
             return []
         
         results = []
@@ -378,8 +435,8 @@ class ArgumentMiningBenchmark:
                 results.append(result)
                 
             except Exception as e:
-                log.error(f"Error processing sample {i} with {implementation_name}: {e}")
-                log.error(f"Traceback: {traceback.format_exc()}")
+                logger.error(f"Error processing sample {i} with {implementation_name}: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 result = BenchmarkResult(
                     task_name='claim_premise_linking',
                     implementation_name=implementation_name,
@@ -408,7 +465,14 @@ class ArgumentMiningBenchmark:
             predicted_adus.extend([adu.text for adu in prediction.premises])
         
         # Extract ground truth ADUs
-        gt_adus = [adu['text'] for adu in ground_truth]
+        gt_adus = []
+        for adu in ground_truth:
+            if isinstance(adu, dict) and 'text' in adu:
+                gt_adus.append(adu['text'])
+            elif isinstance(adu, str):
+                gt_adus.append(adu)
+            else:
+                gt_adus.append(str(adu))
         
         # Calculate token-level metrics
         true_positives = len(set(predicted_adus) & set(gt_adus))
@@ -486,8 +550,8 @@ class ArgumentMiningBenchmark:
         if implementations is None:
             implementations = list(self.implementations.keys())
         
-        log.info(f"Starting benchmark with tasks: {tasks}")
-        log.info(f"Testing implementations: {implementations}")
+        logger.info(f"Starting benchmark with tasks: {tasks}")
+        logger.info(f"Testing implementations: {implementations}")
         
         all_results = {}
         
@@ -496,7 +560,7 @@ class ArgumentMiningBenchmark:
             
             for impl_name in implementations:
                 if impl_name not in self.implementations:
-                    log.warning(f"Implementation {impl_name} not available, skipping")
+                    logger.warning(f"Implementation {impl_name} not available, skipping")
                     continue
                 
                 try:
@@ -507,14 +571,14 @@ class ArgumentMiningBenchmark:
                     elif task == 'claim_premise_linking':
                         results = self.benchmark_claim_premise_linking(impl_name)
                     else:
-                        log.warning(f"Unknown task: {task}")
+                        logger.warning(f"Unknown task: {task}")
                         continue
                     
                     task_results.extend(results)
                     
                 except Exception as e:
-                    log.error(f"Error running {task} with {impl_name}: {e}")
-                    log.error(f"Traceback: {traceback.format_exc()}")
+                    logger.error(f"Error running {task} with {impl_name}: {e}")
+                    logger.error(f"Traceback: {traceback.format_exc()}")
             
             all_results[task] = task_results
         
@@ -564,7 +628,7 @@ class ArgumentMiningBenchmark:
             filename = f"{task_name}_results_{timestamp}.csv"
             filepath = output_dir / filename
             df.to_csv(filepath, index=False)
-            log.info(f"Saved {task_name} results to {filepath}")
+            logger.info(f"Saved {task_name} results to {filepath}")
     
     def _print_summary(self, results: Dict[str, List[BenchmarkResult]]):
         """Print a summary of benchmark results."""
