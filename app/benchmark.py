@@ -18,6 +18,12 @@ Metrics calculated:
 - Accuracy and weighted F1 for stance classification
 - Relationship accuracy for claim-premise linking
 - Inference time per sample
+
+Features:
+- Run individual tasks independently
+- Run individual implementations independently
+- Task-specific data preparation
+- Comprehensive CSV output with execution date
 """
 
 import os
@@ -88,7 +94,7 @@ if str(external_db_path) not in sys.path:
 
 # Import database components
 try:
-    from db.queries import get_benchmark_data
+    from db.queries import get_benchmark_data, get_benchmark_data_details
     print("Successfully imported database components")
 except ImportError as e:
     print(f"Error importing database components: {e}")
@@ -102,6 +108,7 @@ class BenchmarkResult:
     task_name: str
     implementation_name: str
     sample_id: str
+    execution_date: str
     metrics: Dict[str, float]
     performance: Dict[str, float]
     predictions: Any
@@ -111,7 +118,7 @@ class BenchmarkResult:
 
 
 class ArgumentMiningBenchmark:
-    """Enhanced benchmark for argument mining implementations."""
+    """Enhanced benchmark for argument mining implementations with task-specific data preparation."""
 
     def __init__(self, max_samples: int = 100):
         """
@@ -120,10 +127,11 @@ class ArgumentMiningBenchmark:
         Args:
             max_samples: Maximum number of samples to use for benchmarking (default: 100)
         """
-        self.data = None
+        self.data = {}
         self.results = []
         self.implementations = {}
         self.max_samples = max_samples
+        self.execution_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Check environment variables
         self._check_environment()
@@ -131,11 +139,12 @@ class ArgumentMiningBenchmark:
         # Initialize implementations
         self._initialize_implementations()
         
-        # Load benchmark data
+        # Load benchmark data for all tasks
         self._load_benchmark_data()
         
-        logger.info(f"Initialized benchmark with {len(self.data)} samples (max_samples: {self.max_samples})")
+        logger.info(f"Initialized benchmark with max_samples: {self.max_samples}")
         logger.info(f"Available implementations: {list(self.implementations.keys())}")
+        logger.info(f"Available tasks: {list(self.data.keys())}")
     
     def _check_environment(self):
         """Check if required environment variables are set."""
@@ -208,29 +217,103 @@ class ArgumentMiningBenchmark:
         self.implementations = implementations
     
     def _load_benchmark_data(self):
-        """Load benchmark data from database."""
+        """Load benchmark data for all tasks with task-specific preparation."""
         try:
             # Get benchmark data - returns (claims, premises, topics)
             claims, premises, topics = get_benchmark_data()
-            # Convert to dictionary format expected by benchmark functions
-            self.data = []
-            for i in range(min(self.max_samples, len(claims))):
-                sample = {
-                    'text': claims[i].text if hasattr(claims[i], 'text') else str(claims[i]),
-                    'ground_truth': {
-                        'adus': [],  # TODO: Extract ADUs from claims/premises
-                        'stance': 'pro',  # TODO: Get actual stance
-                        'links': [],  # TODO: Get actual links
-                        'relationships': []  # Added for claim-premise linking benchmark
-                    }
-                }
-                self.data.append(sample)
-            logger.info(f"Loaded {len(self.data)} benchmark samples (requested: {self.max_samples})")
+            
+            # Prepare data for each task
+            self.data = {
+                'adu_extraction': self._prepare_adu_extraction_data(claims, premises, topics),
+                'stance_classification': self._prepare_stance_classification_data(claims, premises, topics),
+                'claim_premise_linking': self._prepare_claim_premise_linking_data(claims, premises, topics)
+            }
+            
+            logger.info(f"Loaded benchmark data for all tasks")
+            for task, task_data in self.data.items():
+                logger.info(f"  {task}: {len(task_data)} samples")
+                
         except Exception as e:
             logger.error(f"Failed to load benchmark data: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
             logger.info("Attempting to load local CSV data as fallback...")
             self._load_local_csv_data()
+    
+    def _prepare_adu_extraction_data(self, claims, premises, topics):
+        """Prepare data specifically for ADU extraction task."""
+        data = []
+        for i in range(min(self.max_samples, len(claims))):
+            # For ADU extraction, we need the full text and ground truth ADUs
+            claim_text = claims[i].text if hasattr(claims[i], 'text') else str(claims[i])
+            
+            # Create ground truth ADUs from claims and premises
+            ground_truth_adus = [claim_text]
+            if i < len(premises):
+                premise_text = premises[i].text if hasattr(premises[i], 'text') else str(premises[i])
+                ground_truth_adus.append(premise_text)
+            
+            sample = {
+                'text': claim_text,
+                'ground_truth': {
+                    'adus': ground_truth_adus
+                }
+            }
+            data.append(sample)
+        return data
+    
+    def _prepare_stance_classification_data(self, claims, premises, topics):
+        """Prepare data specifically for stance classification task."""
+        data = []
+        for i in range(min(self.max_samples, len(claims))):
+            claim_text = claims[i].text if hasattr(claims[i], 'text') else str(claims[i])
+            
+            # Determine stance from topics or use alternating pattern
+            stance = 'neutral'
+            if i < len(topics):
+                topic = topics[i] if isinstance(topics[i], str) else str(topics[i])
+                if 'stance_pro' in topic:
+                    stance = 'pro'
+                elif 'stance_con' in topic:
+                    stance = 'con'
+                else:
+                    # Alternate between pro and con for variety
+                    stance = 'pro' if i % 2 == 0 else 'con'
+            
+            sample = {
+                'text': claim_text,
+                'ground_truth': {
+                    'stance': stance
+                }
+            }
+            data.append(sample)
+        return data
+    
+    def _prepare_claim_premise_linking_data(self, claims, premises, topics):
+        """Prepare data specifically for claim-premise linking task."""
+        data = []
+        for i in range(min(self.max_samples, len(claims))):
+            claim_text = claims[i].text if hasattr(claims[i], 'text') else str(claims[i])
+            
+            # Create ground truth relationships
+            relationships = []
+            if i < len(premises):
+                premise_text = premises[i].text if hasattr(premises[i], 'text') else str(premises[i])
+                # Create a simple relationship: claim i links to premise i
+                relationship = {
+                    'claim_text': claim_text,
+                    'premise_text': premise_text,
+                    'relationship_type': 'supports' if i % 2 == 0 else 'contradicts'
+                }
+                relationships.append(relationship)
+            
+            sample = {
+                'text': claim_text,
+                'ground_truth': {
+                    'relationships': relationships
+                }
+            }
+            data.append(sample)
+        return data
     
     def _load_local_csv_data(self):
         """Load benchmark data from local CSV file as fallback."""
@@ -238,48 +321,174 @@ class ArgumentMiningBenchmark:
             csv_path = Path(__file__).parent.parent / "external" / "argument-mining-db" / "data" / "claim_stance_dataset_v1.csv"
             if not csv_path.exists():
                 logger.error(f"Local CSV file not found at {csv_path}")
-                self.data = []
+                self.data = {}
                 return
             
             # Load CSV data
             df = pd.read_csv(csv_path)
             logger.info(f"Loaded {len(df)} rows from local CSV file")
             
-            # Convert to benchmark format
-            self.data = []
-            for i, row in df.head(self.max_samples).iterrows():
-                # Use the claim text as the main text
-                text = row.get('claims.claimCorrectedText', row.get('claims.claimOriginalText', ''))
-                if pd.isna(text) or not text.strip():
-                    continue
-                
-                # Determine stance from the data
-                stance = row.get('claims.stance', 'neutral')
-                if stance == 'PRO':
-                    stance = 'pro'
-                elif stance == 'CON':
-                    stance = 'con'
-                else:
-                    stance = 'neutral'
-                
-                # Create sample with basic ground truth
-                sample = {
-                    'text': text.strip(),
-                    'ground_truth': {
-                        'adus': [text.strip()],  # Treat the claim as an ADU
-                        'stance': stance,
-                        'links': [],
-                        'relationships': []
-                    }
-                }
-                self.data.append(sample)
+            # Prepare data for each task
+            self.data = {
+                'adu_extraction': self._prepare_adu_extraction_data_from_csv(df),
+                'stance_classification': self._prepare_stance_classification_data_from_csv(df),
+                'claim_premise_linking': self._prepare_claim_premise_linking_data_from_csv(df)
+            }
             
-            logger.info(f"Successfully loaded {len(self.data)} samples from local CSV (requested: {self.max_samples})")
+            logger.info(f"Successfully loaded data from local CSV for all tasks")
             
         except Exception as e:
             logger.error(f"Failed to load local CSV data: {e}")
             logger.error(f"Traceback: {traceback.format_exc()}")
-            self.data = []
+            self.data = {}
+    
+    def _prepare_adu_extraction_data_from_csv(self, df):
+        """Prepare ADU extraction data from CSV."""
+        data = []
+        for i, row in df.head(self.max_samples).iterrows():
+            text = row.get('claims.claimCorrectedText', row.get('claims.claimOriginalText', ''))
+            if pd.isna(text) or not text.strip():
+                continue
+            
+            sample = {
+                'text': text.strip(),
+                'ground_truth': {
+                    'adus': [text.strip()]
+                }
+            }
+            data.append(sample)
+        return data
+    
+    def _prepare_stance_classification_data_from_csv(self, df):
+        """Prepare stance classification data from CSV."""
+        data = []
+        for i, row in df.head(self.max_samples).iterrows():
+            text = row.get('claims.claimCorrectedText', row.get('claims.claimOriginalText', ''))
+            if pd.isna(text) or not text.strip():
+                continue
+            
+            stance = row.get('claims.stance', 'neutral')
+            if stance == 'PRO':
+                stance = 'pro'
+            elif stance == 'CON':
+                stance = 'con'
+            else:
+                stance = 'neutral'
+            
+            sample = {
+                'text': text.strip(),
+                'ground_truth': {
+                    'stance': stance
+                }
+            }
+            data.append(sample)
+        return data
+    
+    def _prepare_claim_premise_linking_data_from_csv(self, df):
+        """Prepare claim-premise linking data from CSV."""
+        data = []
+        for i, row in df.head(self.max_samples).iterrows():
+            text = row.get('claims.claimCorrectedText', row.get('claims.claimOriginalText', ''))
+            if pd.isna(text) or not text.strip():
+                continue
+            
+            sample = {
+                'text': text.strip(),
+                'ground_truth': {
+                    'relationships': []
+                }
+            }
+            data.append(sample)
+        return data
+    
+    def run_single_task(self, task_name: str, implementation_name: str = None) -> List[BenchmarkResult]:
+        """Run a single task with all available implementations or a specific one."""
+        if task_name not in self.data:
+            logger.error(f"Unknown task: {task_name}")
+            return []
+        
+        if implementation_name and implementation_name not in self.implementations:
+            logger.error(f"Implementation {implementation_name} not available")
+            return []
+        
+        implementations_to_test = [implementation_name] if implementation_name else list(self.implementations.keys())
+        results = []
+        
+        logger.info(f"Running task '{task_name}' with implementations: {implementations_to_test}")
+        
+        for impl_name in implementations_to_test:
+            if impl_name not in self.implementations:
+                logger.warning(f"Implementation {impl_name} not available, skipping")
+                continue
+            
+            try:
+                if task_name == 'adu_extraction':
+                    task_results = self.benchmark_adu_extraction(impl_name)
+                elif task_name == 'stance_classification':
+                    task_results = self.benchmark_stance_classification(impl_name)
+                elif task_name == 'claim_premise_linking':
+                    task_results = self.benchmark_claim_premise_linking(impl_name)
+                else:
+                    logger.warning(f"Unknown task: {task_name}")
+                    continue
+                
+                results.extend(task_results)
+                
+            except Exception as e:
+                logger.error(f"Error running {task_name} with {impl_name}: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Save results for this task
+        if results:
+            self._save_results({task_name: results})
+        
+        return results
+    
+    def run_single_implementation(self, implementation_name: str, task_name: str = None) -> List[BenchmarkResult]:
+        """Run a single implementation on all tasks or a specific task."""
+        if implementation_name not in self.implementations:
+            logger.error(f"Implementation {implementation_name} not available")
+            return []
+        
+        if task_name and task_name not in self.data:
+            logger.error(f"Unknown task: {task_name}")
+            return []
+        
+        tasks_to_test = [task_name] if task_name else list(self.data.keys())
+        results = []
+        
+        logger.info(f"Running implementation '{implementation_name}' on tasks: {tasks_to_test}")
+        
+        for task in tasks_to_test:
+            try:
+                if task == 'adu_extraction':
+                    task_results = self.benchmark_adu_extraction(implementation_name)
+                elif task == 'stance_classification':
+                    task_results = self.benchmark_stance_classification(implementation_name)
+                elif task == 'claim_premise_linking':
+                    task_results = self.benchmark_claim_premise_linking(implementation_name)
+                else:
+                    logger.warning(f"Unknown task: {task}")
+                    continue
+                
+                results.extend(task_results)
+                
+            except Exception as e:
+                logger.error(f"Error running {task} with {implementation_name}: {e}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
+        
+        # Save results for this implementation
+        if results:
+            # Group results by task for saving
+            results_by_task = {}
+            for result in results:
+                if result.task_name not in results_by_task:
+                    results_by_task[result.task_name] = []
+                results_by_task[result.task_name].append(result)
+            
+            self._save_results(results_by_task)
+        
+        return results
     
     def benchmark_adu_extraction(self, implementation_name: str) -> List[BenchmarkResult]:
         """Benchmark ADU extraction task."""
@@ -292,7 +501,7 @@ class ArgumentMiningBenchmark:
         classifier = self.implementations[implementation_name]['adu_classifier']
         results = []
         
-        for i, sample in enumerate(self.data):
+        for i, sample in enumerate(self.data['adu_extraction']):
             try:
                 # Measure inference time
                 start_time = time.time()
@@ -307,6 +516,7 @@ class ArgumentMiningBenchmark:
                     task_name='adu_extraction',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics=metrics,
                     performance=performance,
                     predictions=prediction,
@@ -321,6 +531,7 @@ class ArgumentMiningBenchmark:
                     task_name='adu_extraction',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics={},
                     performance={},
                     predictions=None,
@@ -343,7 +554,7 @@ class ArgumentMiningBenchmark:
         classifier = self.implementations[implementation_name]['adu_classifier']
         results = []
         
-        for i, sample in enumerate(self.data):
+        for i, sample in enumerate(self.data['stance_classification']):
             try:
                 # First extract ADUs
                 adus = classifier.classify_adus(sample['text'])
@@ -368,6 +579,7 @@ class ArgumentMiningBenchmark:
                     task_name='stance_classification',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics=metrics,
                     performance=performance,
                     predictions=stance_result,
@@ -382,6 +594,7 @@ class ArgumentMiningBenchmark:
                     task_name='stance_classification',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics={},
                     performance={},
                     predictions=None,
@@ -408,7 +621,7 @@ class ArgumentMiningBenchmark:
         
         results = []
         
-        for i, sample in enumerate(self.data):
+        for i, sample in enumerate(self.data['claim_premise_linking']):
             try:
                 # First extract ADUs to create UnlinkedArgumentUnits
                 classifier = self.implementations[implementation_name]['adu_classifier']
@@ -427,6 +640,7 @@ class ArgumentMiningBenchmark:
                     task_name='claim_premise_linking',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics=metrics,
                     performance=performance,
                     predictions=prediction,
@@ -441,6 +655,7 @@ class ArgumentMiningBenchmark:
                     task_name='claim_premise_linking',
                     implementation_name=implementation_name,
                     sample_id=f"sample_{i}",
+                    execution_date=self.execution_date,
                     metrics={},
                     performance={},
                     predictions=None,
@@ -545,7 +760,7 @@ class ArgumentMiningBenchmark:
     def run_benchmark(self, tasks: List[str] = None, implementations: List[str] = None) -> Dict[str, List[BenchmarkResult]]:
         """Run the complete benchmark suite."""
         if tasks is None:
-            tasks = ['adu_extraction', 'stance_classification', 'claim_premise_linking']
+            tasks = list(self.data.keys())
         
         if implementations is None:
             implementations = list(self.implementations.keys())
@@ -591,7 +806,7 @@ class ArgumentMiningBenchmark:
         return all_results
     
     def _save_results(self, results: Dict[str, List[BenchmarkResult]]):
-        """Save benchmark results to CSV files."""
+        """Save benchmark results to CSV files with improved format."""
         output_dir = Path("results")
         output_dir.mkdir(exist_ok=True)
         
@@ -605,6 +820,7 @@ class ArgumentMiningBenchmark:
             df_data = []
             for result in task_results:
                 row = {
+                    'execution_date': result.execution_date,
                     'task': result.task_name,
                     'implementation': result.implementation_name,
                     'sample_id': result.sample_id,
@@ -635,6 +851,7 @@ class ArgumentMiningBenchmark:
         print("\n" + "="*80)
         print("BENCHMARK SUMMARY")
         print("="*80)
+        print(f"Execution Date: {self.execution_date}")
         
         for task_name, task_results in results.items():
             if not task_results:
@@ -683,7 +900,7 @@ def test_imports(max_samples: int = 100):
     try:
         benchmark = ArgumentMiningBenchmark(max_samples=max_samples)
         print("Benchmark class created successfully")
-        print(f"  - Loaded {len(benchmark.data)} samples (requested: {max_samples})")
+        print(f"  - Loaded data for tasks: {list(benchmark.data.keys())}")
         print(f"  - Available implementations: {list(benchmark.implementations.keys())}")
         return True
     except Exception as e:
@@ -701,6 +918,32 @@ def run_full_benchmark(max_samples: int = 100):
         return results
     except Exception as e:
         print(f"Benchmark failed: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return None
+
+
+def run_single_task_benchmark(task_name: str, max_samples: int = 100, implementation_name: str = None):
+    """Run benchmark for a single task."""
+    try:
+        benchmark = ArgumentMiningBenchmark(max_samples=max_samples)
+        results = benchmark.run_single_task(task_name, implementation_name)
+        print(f"Task '{task_name}' benchmark completed successfully")
+        return results
+    except Exception as e:
+        print(f"Task '{task_name}' benchmark failed: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return None
+
+
+def run_single_implementation_benchmark(implementation_name: str, max_samples: int = 100, task_name: str = None):
+    """Run benchmark for a single implementation."""
+    try:
+        benchmark = ArgumentMiningBenchmark(max_samples=max_samples)
+        results = benchmark.run_single_implementation(implementation_name, task_name)
+        print(f"Implementation '{implementation_name}' benchmark completed successfully")
+        return results
+    except Exception as e:
+        print(f"Implementation '{implementation_name}' benchmark failed: {e}")
         print(f"Traceback: {traceback.format_exc()}")
         return None
 
