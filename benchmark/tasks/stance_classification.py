@@ -121,4 +121,4 @@ class StanceClassificationTask(BaseTask):
     def calculate_metrics(self, predictions: str, ground_truth: str) -> Dict[str, float]:
         """Calculate comprehensive metrics for stance classification."""
         # Use the comprehensive metrics calculator
-        return MetricsCalculator.calculate_stance_metrics([predictions], [ground_truth])
+        return MetricsCalculator.calculate_stance_metrics(predictions, ground_truth)

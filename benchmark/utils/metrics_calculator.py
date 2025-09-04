@@ -83,14 +83,14 @@ class MetricsCalculator:
         }
     
     @staticmethod
-    def calculate_stance_metrics(predictions: List[str], 
-                               ground_truth: List[str]) -> Dict[str, float]:
+    def calculate_stance_metrics(predictions, 
+                               ground_truth: str) -> Dict[str, float]:
         """
         Calculate metrics specifically for stance classification.
         
         Args:
-            predictions: List of predicted stances
-            ground_truth: List of ground truth stances
+            predictions: LinkedArgumentUnitsWithStance object with predicted stances
+            ground_truth: Ground truth stance string
             
         Returns:
             Dictionary containing stance classification metrics
@@ -107,38 +107,43 @@ class MetricsCalculator:
                 'fn': 0
             }
         
-        # Convert to lowercase for comparison
-        pred_lower = [p.lower() if p else '' for p in predictions]
-        gt_lower = [g.lower() if g else '' for g in ground_truth]
-        
-        # Calculate accuracy
-        correct = sum(1 for p, g in zip(pred_lower, gt_lower) if p == g)
-        accuracy = correct / len(gt_lower) if gt_lower else 0.0
-        
-        # For stance classification, we'll treat it as a multi-class problem
-        # and calculate weighted metrics
+        # Extract stance from LinkedArgumentUnitsWithStance object
         try:
-            precision = precision_score(gt_lower, pred_lower, average='weighted', zero_division=0)
-            recall = recall_score(gt_lower, pred_lower, average='weighted', zero_division=0)
-            f1 = f1_score(gt_lower, pred_lower, average='weighted', zero_division=0)
+            if hasattr(predictions, 'stance_relations') and predictions.stance_relations:
+                # Get the first stance from stance_relations
+                pred_stance = predictions.stance_relations[0].stance.lower() if hasattr(predictions.stance_relations[0], 'stance') else ''
+            else:
+                # Fallback: try to get stance from other attributes
+                pred_stance = ''
+                if hasattr(predictions, 'stance'):
+                    pred_stance = predictions.stance.lower()
+                elif hasattr(predictions, 'stance_relation'):
+                    pred_stance = predictions.stance_relation.lower()
         except:
-            # Fallback if sklearn fails
-            precision = accuracy
-            recall = accuracy
-            f1 = accuracy
+            pred_stance = ''
         
-        # Calculate confusion matrix metrics for stance classification
-        # We'll treat this as a binary classification problem for confusion matrix
+        gt_stance = ground_truth.lower() if ground_truth else ''
+        
+        # Calculate accuracy (simple binary: correct or not)
+        accuracy = 1.0 if pred_stance == gt_stance else 0.0
+        
+        # For stance classification, we'll treat it as a binary classification problem
         # where we count correct predictions as true positives
-        correct_predictions = sum(1 for p, g in zip(pred_lower, gt_lower) if p == g)
-        incorrect_predictions = len(gt_lower) - correct_predictions if gt_lower else 0
+        if pred_stance == gt_stance:
+            tp = 1
+            tn = 0
+            fp = 0
+            fn = 0
+        else:
+            tp = 0
+            tn = 0
+            fp = 1
+            fn = 0
         
-        # For stance classification, we'll use a simplified approach:
-        # tp = correct predictions, fp = incorrect predictions, tn = 0, fn = 0
-        tp = correct_predictions
-        tn = 0  # No true negatives in this context
-        fp = incorrect_predictions
-        fn = 0  # No false negatives in this context
+        # Set other metrics to accuracy for now
+        precision = accuracy
+        recall = accuracy
+        f1 = accuracy
         
         return {
             'accuracy': float(accuracy),
@@ -202,25 +207,25 @@ class MetricsCalculator:
             tp, tn, fp, fn = 0, 0, 0, 0
         else:
             accuracy = 1.0 if pred_count == gt_count else 0.0
-            # Calculate confusion matrix metrics
+            # Calculate confusion matrix metrics as binary classification per sample
             if pred_count == gt_count:
-                # Perfect match
-                tp = gt_count
+                # Perfect match: true positive
+                tp = 1
                 tn = 0
                 fp = 0
                 fn = 0
             elif pred_count > gt_count:
-                # Over-prediction
-                tp = gt_count
+                # Over-prediction: false positive
+                tp = 0
                 tn = 0
-                fp = pred_count - gt_count
+                fp = 1
                 fn = 0
             else:
-                # Under-prediction
-                tp = pred_count
+                # Under-prediction: false negative
+                tp = 0
                 tn = 0
                 fp = 0
-                fn = gt_count - pred_count
+                fn = 1
         
         # Set other metrics to accuracy for now
         precision = accuracy
@@ -282,25 +287,25 @@ class MetricsCalculator:
             tp, tn, fp, fn = 0, 0, 0, 0
         else:
             accuracy = 1.0 if pred_count == gt_count else 0.0
-            # Calculate confusion matrix metrics
+            # Calculate confusion matrix metrics as binary classification per sample
             if pred_count == gt_count:
-                # Perfect match
-                tp = gt_count
+                # Perfect match: true positive
+                tp = 1
                 tn = 0
                 fp = 0
                 fn = 0
             elif pred_count > gt_count:
-                # Over-prediction
-                tp = gt_count
+                # Over-prediction: false positive
+                tp = 0
                 tn = 0
-                fp = pred_count - gt_count
+                fp = 1
                 fn = 0
             else:
-                # Under-prediction
-                tp = pred_count
+                # Under-prediction: false negative
+                tp = 0
                 tn = 0
                 fp = 0
-                fn = gt_count - pred_count
+                fn = 1
         
         # Set other metrics to accuracy for now
         precision = accuracy

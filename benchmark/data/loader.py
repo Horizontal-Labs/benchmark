@@ -8,7 +8,7 @@ from pathlib import Path
 
 # Try to import database components
 try:
-    from db.queries import get_benchmark_data, get_benchmark_data_details
+    from db.queries import get_benchmark_data, get_benchmark_data_details, get_quality_data
     DB_AVAILABLE = True
 except ImportError:
     DB_AVAILABLE = False
@@ -25,7 +25,7 @@ class DataLoader:
         if self.db_available:
             try:
                 # Get benchmark data - returns (claims, premises, topics)
-                claims, premises, topics = get_benchmark_data()
+                claims, premises, topics = get_quality_data()
                 print("Successfully loaded database components")
                 return claims, premises, topics
             except Exception as e:

@@ -16,7 +16,7 @@ Tasks benchmarked:
 import os
 import sys
 import time
-import pandas as pd
+
 import numpy as np
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
@@ -64,18 +64,20 @@ print("Successfully imported argument mining components")
 class ArgumentMiningBenchmark:
     """Enhanced benchmark for argument mining implementations with task-specific data preparation."""
 
-    def __init__(self, max_samples: int = 100):
+    def __init__(self, max_samples: int = 100, disable_openai: bool = False):
         """
         Initialize the benchmark.
         
         Args:
             max_samples: Maximum number of samples to use for benchmarking (default: 100)
+            disable_openai: If True, skip OpenAI implementation initialization (default: False)
         """
         self.data = {}
         self.results = []
         self.implementations = {}
         self.tasks = {}
         self.max_samples = max_samples
+        self.disable_openai = disable_openai
         self.execution_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Check environment variables
@@ -91,6 +93,8 @@ class ArgumentMiningBenchmark:
         self._load_benchmark_data()
         
         print(f"Initialized benchmark with max_samples: {self.max_samples}")
+        if self.disable_openai:
+            print("OpenAI implementations disabled")
         print(f"Available implementations: {list(self.implementations.keys())}")
         print(f"Available tasks: {list(self.tasks.keys())}")
     
@@ -107,13 +111,14 @@ class ArgumentMiningBenchmark:
         implementations = {}
         
         # OpenAI implementation
-        try:
-            openai_impl = OpenAIImplementation()
-            if openai_impl.initialize():
-                implementations['openai'] = openai_impl
-                print("Initialized OpenAI implementation")
-        except Exception as e:
-            print(f"Failed to initialize OpenAI implementation: {e}")
+        if not self.disable_openai:
+            try:
+                openai_impl = OpenAIImplementation()
+                if openai_impl.initialize():
+                    implementations['openai'] = openai_impl
+                    print("Initialized OpenAI implementation")
+            except Exception as e:
+                print(f"Failed to initialize OpenAI implementation: {e}")
         
         # TinyLlama implementation
         try:
@@ -194,13 +199,13 @@ class ArgumentMiningBenchmark:
                     individual: bool = False,
                     output_dir: str = "results") -> str:
         """
-        Save benchmark results to CSV files in organized subdirectories.
+        Save benchmark results to CSV and JSON files in organized subdirectories.
         
         Args:
             results: Dictionary of benchmark results
-            comprehensive: Whether to save all results in one comprehensive CSV
-            individual: Whether to save individual task results in separate CSVs
-            output_dir: Output directory for CSV files
+            comprehensive: Whether to save all results in comprehensive formats
+            individual: Whether to save individual task results in separate files
+            output_dir: Output directory for CSV and JSON files
             
         Returns:
             Path to the output directory
@@ -217,33 +222,38 @@ class ArgumentMiningBenchmark:
         metrics_dir.mkdir(exist_ok=True)
         
         if comprehensive:
-            # Append to the three specific CSV files (no comprehensive results)
+            # Save to JSON files (append mode)
             from ..utils.file_handlers import (
-                append_to_implementations_csv,
-                append_to_tasks_csv,
-                append_to_system_csv
+                append_to_implementations_json,
+                append_to_tasks_json,
+                append_to_system_json
             )
             
-            # Append implementation metrics to implementations.csv
-            append_to_implementations_csv(results, str(metrics_dir))
+            # Append implementation metrics to implementations.json
+            append_to_implementations_json(results, str(metrics_dir))
             
-            # Append task metrics to tasks.csv
-            append_to_tasks_csv(results, str(metrics_dir))
+            # Append task metrics to tasks.json
+            append_to_tasks_json(results, str(metrics_dir))
             
-            # Append system metrics to system.csv
-            append_to_system_csv(results, str(metrics_dir))
+            # Append system metrics to system.json
+            append_to_system_json(results, str(metrics_dir))
+            
+            # Save to CSV files (comprehensive)
+            from ..utils.file_handlers import save_comprehensive_results_csv
+            save_comprehensive_results_csv(results, str(main_output_path))
         
         if individual:
             # Save individual results to inferences subdirectory
-            from ..utils.file_handlers import save_results_to_csv
-            save_results_to_csv(results, str(inferences_dir))
+            from ..utils.file_handlers import save_results_to_json
+            save_results_to_json(results, str(inferences_dir))
         
         print(f"Results saved to:")
         print(f"  Inferences: {inferences_dir}")
         print(f"  Metrics: {metrics_dir}")
-        print(f"    - implementations.csv (appended)")
-        print(f"    - tasks.csv (appended)")
-        print(f"    - system.csv (appended)")
+        print(f"    - implementations.json (appended)")
+        print(f"    - tasks.json (appended)")
+        print(f"    - system.json (appended)")
+        print(f"    - CSV files (comprehensive)")
         
         return str(main_output_path)
     
