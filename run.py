@@ -286,29 +286,43 @@ class BenchmarkRunner:
                             progress.update(overall_task, advance=1)
                             continue
                         
-                        # Implementation-specific progress
-                        impl_progress = progress.add_task(f"  {impl_name}", total=1)
+                        # Get task data first
+                        task_data = self.benchmark.data.get(task_name, [])
+                        if not task_data:
+                            if self.verbose:
+                                self.console.print(f"[yellow]No data available for {task_name}[/yellow]")
+                            progress.update(task_progress, advance=1)
+                            progress.update(overall_task, advance=1)
+                            continue
+                        
+                        # Limit data to max_samples
+                        task_data = task_data[:self.benchmark.max_samples]
+                        
+                        # Create a custom progress bar wrapper that works with Rich
+                        class RichProgressWrapper:
+                            def __init__(self, progress_context, task_id, total):
+                                self.progress_context = progress_context
+                                self.task_id = task_id
+                                self.total = total
+                                self.current = 0
+                            
+                            def update(self, n=1):
+                                self.current += n
+                                self.progress_context.update(self.task_id, completed=self.current)
+                            
+                            def close(self):
+                                pass  # Rich progress bars don't need to be closed
+                        
+                        impl_progress = progress.add_task(f"  {impl_name}", total=len(task_data))
+                        progress_wrapper = RichProgressWrapper(progress, impl_progress, len(task_data))
                         
                         try:
                             if self.verbose:
                                 self.console.print(f"[cyan]Running {task_name} with {impl_name}...[/cyan]")
                             
-                            # Get task data
-                            task_data = self.benchmark.data.get(task_name, [])
-                            if not task_data:
-                                if self.verbose:
-                                    self.console.print(f"[yellow]No data available for {task_name}[/yellow]")
-                                progress.update(impl_progress, advance=1)
-                                progress.update(task_progress, advance=1)
-                                progress.update(overall_task, advance=1)
-                                continue
-                            
-                            # Limit data to max_samples
-                            task_data = task_data[:self.benchmark.max_samples]
-                            
                             # Run the task
                             task_obj = self.benchmark.tasks[task_name]
-                            results = task_obj.run_benchmark(implementation, task_data)
+                            results = task_obj.run_benchmark(implementation, task_data, progress_bar=progress_wrapper)
                             task_results.extend(results)
                             
                             if self.verbose:

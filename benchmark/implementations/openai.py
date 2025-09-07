@@ -7,6 +7,7 @@ import traceback
 from typing import Dict, Any
 
 from .base import BaseImplementation
+from ..utils.logging_utils import get_logger, log_initialization
 
 # Import OpenAI components
 try:
@@ -22,25 +23,29 @@ class OpenAIImplementation(BaseImplementation):
     
     def __init__(self):
         super().__init__("openai")
+        self.logger = get_logger()
     
     def initialize(self) -> bool:
         """Initialize OpenAI implementation."""
         if not OPENAI_AVAILABLE:
+            log_initialization(self.logger, "OpenAI", "failed", "OpenAI components not available")
             return False
         
         try:
             # Check if API key is available
             if not os.getenv("OPEN_AI_KEY") and not os.getenv("OPENAI_API_KEY"):
+                log_initialization(self.logger, "OpenAI", "failed", "No API key found")
                 return False
             
             # Initialize components
             self.adu_classifier = OpenAILLMClassifier()
             self.linker = OpenAIClaimPremiseLinker()
             
+            log_initialization(self.logger, "OpenAI", "success")
             return True
         except Exception as e:
-            print(f"Failed to initialize OpenAI implementation: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
+            log_initialization(self.logger, "OpenAI", "failed", f"Initialization error: {e}")
+            self.logger.error(f"OpenAI initialization traceback: {traceback.format_exc()}")
             return False
     
     def is_available(self) -> bool:

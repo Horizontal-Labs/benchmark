@@ -6,6 +6,7 @@ import traceback
 from typing import Dict, Any
 
 from .base import BaseImplementation
+from ..utils.logging_utils import get_logger, log_initialization
 
 # Import TinyLlama components
 try:
@@ -27,11 +28,12 @@ class TinyLlamaImplementation(BaseImplementation):
     
     def __init__(self):
         super().__init__("tinyllama")
+        self.logger = get_logger()
     
     def initialize(self) -> bool:
         """Initialize TinyLlama implementation."""
         if not TINYLLAMA_AVAILABLE:
-            print(f"TinyLlama not available due to import error: {IMPORT_ERROR}")
+            log_initialization(self.logger, "TinyLlama", "failed", f"Import error: {IMPORT_ERROR}")
             return False
         
         try:
@@ -40,10 +42,11 @@ class TinyLlamaImplementation(BaseImplementation):
             # TinyLlama doesn't have linking capability
             self.linker = None
             
+            log_initialization(self.logger, "TinyLlama", "success")
             return True
         except Exception as e:
-            print(f"Failed to initialize TinyLlama implementation: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
+            log_initialization(self.logger, "TinyLlama", "failed", f"Initialization error: {e}")
+            self.logger.error(f"TinyLlama initialization traceback: {traceback.format_exc()}")
             return False
     
     def is_available(self) -> bool:

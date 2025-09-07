@@ -299,13 +299,13 @@ class ArgumentMiningBenchmark:
             from ..utils.file_handlers import save_results_to_json
             save_results_to_json(results, str(inferences_dir))
         
-        print(f"Results saved to:")
-        print(f"  Inferences: {inferences_dir}")
-        print(f"  Metrics: {metrics_dir}")
-        print(f"    - implementations.json (appended)")
-        print(f"    - tasks.json (appended)")
-        print(f"    - system.json (appended)")
-        print(f"    - CSV files (comprehensive)")
+        logger.info(f"Results saved to:")
+        logger.info(f"  Inferences: {inferences_dir}")
+        logger.info(f"  Metrics: {metrics_dir}")
+        logger.info(f"    - implementations.json (appended)")
+        logger.info(f"    - tasks.json (appended)")
+        logger.info(f"    - system.json (appended)")
+        logger.info(f"    - CSV files (comprehensive)")
         
         return str(main_output_path)
     
@@ -316,14 +316,14 @@ class ArgumentMiningBenchmark:
     def run_single_task(self, task_name: str, implementation_name: str = None, progress_bar=None) -> List[BenchmarkResult]:
         """Run benchmark for a single task."""
         if task_name not in self.tasks:
-            print(f"Unknown task: {task_name}")
+            logger.error(f"Unknown task: {task_name}")
             return []
         
         task = self.tasks[task_name]
         task_data = self.data.get(task_name, [])
         
         if not task_data:
-            print(f"No data available for task: {task_name}")
+            logger.warning(f"No data available for task: {task_name}")
             return []
         
         # Limit data to max_samples
@@ -341,9 +341,10 @@ class ArgumentMiningBenchmark:
                     progress_bar.update(1)
                 continue
             
-            print(f"Running {task_name} with {impl_name} implementation...")
+            log_benchmark_progress(logger, task_name, impl_name, "started")
             results = task.run_benchmark(implementation, task_data, progress_bar=progress_bar)
             all_results.extend(results)
+            log_benchmark_progress(logger, task_name, impl_name, "completed")
             
             # Update progress bar
             if progress_bar:
@@ -354,7 +355,7 @@ class ArgumentMiningBenchmark:
     def run_single_implementation(self, implementation_name: str, task_name: str = None) -> Dict[str, List[BenchmarkResult]]:
         """Run benchmark for a single implementation."""
         if implementation_name not in self.implementations:
-            print(f"Unknown implementation: {implementation_name}")
+            logger.error(f"Unknown implementation: {implementation_name}")
             return {}
         
         implementation = self.implementations[implementation_name]
@@ -368,28 +369,29 @@ class ArgumentMiningBenchmark:
                 continue
             
             if not implementation.supports_task(task_name):
-                print(f"Implementation {implementation_name} does not support task {task_name}")
+                logger.warning(f"Implementation {implementation_name} does not support task {task_name}")
                 continue
             
-            print(f"Running {task_name} with {implementation_name} implementation...")
+            log_benchmark_progress(logger, task_name, implementation_name, "started")
             results = self.run_single_task(task_name, implementation_name)
             all_results[task_name] = results
+            log_benchmark_progress(logger, task_name, implementation_name, "completed")
         
         return all_results
     
     def _print_summary(self, results: Dict[str, List[BenchmarkResult]]):
         """Print a summary of benchmark results."""
-        print("\n" + "="*80)
-        print("BENCHMARK SUMMARY")
-        print("="*80)
-        print(f"Execution Date: {self.execution_date}")
+        logger.info("="*80)
+        logger.info("BENCHMARK SUMMARY")
+        logger.info("="*80)
+        logger.info(f"Execution Date: {self.execution_date}")
         
         for task_name, task_results in results.items():
             if not task_results:
                 continue
             
-            print(f"\n{task_name.upper()} RESULTS:")
-            print("-" * 40)
+            logger.info(f"{task_name.upper()} RESULTS:")
+            logger.info("-" * 40)
             
             # Group by implementation
             impl_results = {}
@@ -415,10 +417,10 @@ class ArgumentMiningBenchmark:
                     values = [r.performance[perf_name] for r in impl_result_list if r.success]
                     avg_performance[perf_name] = np.mean(values) if values else 0.0
                 
-                print(f"\n{impl_name}:")
+                logger.info(f"{impl_name}:")
                 for metric_name, value in avg_metrics.items():
-                    print(f"  {metric_name}: {value:.3f}")
+                    logger.info(f"  {metric_name}: {value:.3f}")
                 for perf_name, value in avg_performance.items():
-                    print(f"  {perf_name}: {value:.3f}s")
+                    logger.info(f"  {perf_name}: {value:.3f}s")
         
-        print("\n" + "="*80)
+        logger.info("="*80)

@@ -5,6 +5,7 @@ Utility module for calculating comprehensive benchmark metrics.
 from typing import Dict, Any, List, Union
 import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from .logging_utils import get_logger
 
 
 class MetricsCalculator:
@@ -197,8 +198,9 @@ class MetricsCalculator:
         gt_premises = []
         try:
             # Debug: Print the type and content of ground_truth
-            print(f"DEBUG: ground_truth type: {type(ground_truth)}")
-            print(f"DEBUG: ground_truth content: {ground_truth}")
+            logger = get_logger()
+            logger.debug(f"ground_truth type: {type(ground_truth)}")
+            logger.debug(f"ground_truth content: {ground_truth}")
             
             # Ground truth is a list of ADU text strings
             if isinstance(ground_truth, list):
@@ -209,9 +211,9 @@ class MetricsCalculator:
                         # distinguish between claims and premises based on position or other heuristics
                         gt_claims.append(adu_text)
             else:
-                print(f"DEBUG: ground_truth is not a list, it's: {type(ground_truth)}")
+                logger.debug(f"ground_truth is not a list, it's: {type(ground_truth)}")
         except Exception as e:
-            print(f"DEBUG: Exception in ground truth processing: {e}")
+            logger.debug(f"Exception in ground truth processing: {e}")
             pass
         
         # Calculate metrics based on content matching

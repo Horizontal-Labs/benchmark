@@ -6,6 +6,7 @@ import traceback
 from typing import Dict, Any
 
 from .base import BaseImplementation
+from ..utils.logging_utils import get_logger, log_initialization
 
 # Import DeBERTa components
 try:
@@ -20,31 +21,37 @@ class DeBERTaImplementation(BaseImplementation):
     
     def __init__(self):
         super().__init__("deberta")
+        self.logger = get_logger()
     
     def initialize(self) -> bool:
         """Initialize DeBERTa implementation."""
         if not DEBERTA_AVAILABLE:
+            log_initialization(self.logger, "DeBERTa", "failed", "DeBERTa components not available")
             return False
         
         try:
             # Get DeBERTa configuration
             deberta_config = MODEL_CONFIGS.get('deberta')
             if not deberta_config:
+                log_initialization(self.logger, "DeBERTa", "failed", "No configuration found")
                 return False
             
             # Extract model paths from params
             model_paths = deberta_config['params'].get('model_paths')
             if not model_paths:
+                log_initialization(self.logger, "DeBERTa", "failed", "No model paths found")
                 return False
             
             # Initialize components
             self.adu_classifier = NonTrainedEncoderModelLoader(model_paths=model_paths)
-            # DeBERTa doesn't have            self.linker = None
+            # DeBERTa doesn't have linking capability
+            self.linker = None
             
+            log_initialization(self.logger, "DeBERTa", "success")
             return True
         except Exception as e:
-            print(f"Failed to initialize DeBERTa implementation: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
+            log_initialization(self.logger, "DeBERTa", "failed", f"Initialization error: {e}")
+            self.logger.error(f"DeBERTa initialization traceback: {traceback.format_exc()}")
             return False
     
     def is_available(self) -> bool:

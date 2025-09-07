@@ -8,6 +8,7 @@ from typing import Dict, List, Any
 from datetime import datetime
 import pandas as pd
 from benchmark.core.results import BenchmarkResult
+from .logging_utils import get_logger
 
 
 def save_results_to_json(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -49,7 +50,8 @@ def save_results_to_json(results: Dict[str, List[BenchmarkResult]], output_dir: 
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(results_data, f, indent=2, ensure_ascii=False)
         
-        print(f"Saved {len(results_data)} results to {filepath}")
+        logger = get_logger()
+        logger.info(f"Saved {len(results_data)} results to {filepath}")
 
 
 def append_to_json(filepath: Path, new_data: List[Dict], mode: str = 'append') -> None:
@@ -179,7 +181,8 @@ def append_to_implementations_json(results: Dict[str, List[BenchmarkResult]], ou
     
     # Append to JSON file
     append_to_json(implementations_file, append_data, mode='append')
-    print(f"Appended implementation metrics to {implementations_file}")
+    logger = get_logger()
+    logger.info(f"Appended implementation metrics to {implementations_file}")
 
 
 def append_to_tasks_json(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -345,7 +348,8 @@ def append_to_tasks_json(results: Dict[str, List[BenchmarkResult]], output_dir: 
     
     # Append to JSON file
     append_to_json(tasks_file, append_data, mode='append')
-    print(f"Appended task metrics to {tasks_file}")
+    logger = get_logger()
+    logger.info(f"Appended task metrics to {tasks_file}")
 
 
 def append_to_system_json(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -582,7 +586,8 @@ def append_to_system_json(results: Dict[str, List[BenchmarkResult]], output_dir:
     
     # Append to JSON file
     append_to_json(system_file, append_data, mode='append')
-    print(f"Appended system metrics to {system_file}")
+    logger = get_logger()
+    logger.info(f"Appended system metrics to {system_file}")
 
 
 # Keep the old CSV functions for backward compatibility but mark them as deprecated
@@ -616,7 +621,8 @@ def save_comprehensive_results_csv(results: Dict[str, List[BenchmarkResult]], ou
     append_to_implementations_csv(results, str(metrics_dir))
     append_to_system_csv(results, str(metrics_dir))
     
-    print(f"Saved comprehensive results to CSV in {main_results_dir}")
+    logger = get_logger()
+    logger.info(f"Saved comprehensive results to CSV in {main_results_dir}")
 
 
 def save_results_to_csv(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -662,7 +668,8 @@ def save_results_to_csv(results: Dict[str, List[BenchmarkResult]], output_dir: s
         
         append_to_csv(filepath, csv_data, mode='append')
         
-        print(f"Appended {len(csv_data)} individual results to {filepath}")
+        logger = get_logger()
+        logger.info(f"Appended {len(csv_data)} individual results to {filepath}")
 
 
 def save_aggregated_metrics_csv(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -768,7 +775,8 @@ def save_tasks_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path,
         df = pd.DataFrame(csv_data)
         df.to_csv(filepath, index=False, encoding='utf-8')
         
-        print(f"Saved task metrics to {filepath}")
+        logger = get_logger()
+        logger.info(f"Saved task metrics to {filepath}")
 
 
 def save_implementations_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path, timestamp: str) -> None:
@@ -844,7 +852,8 @@ def save_implementations_csv(results: Dict[str, List[BenchmarkResult]], metrics_
         df = pd.DataFrame(csv_data)
         df.to_csv(filepath, index=False, encoding='utf-8')
         
-        print(f"Saved implementation metrics to {filepath}")
+        logger = get_logger()
+        logger.info(f"Saved implementation metrics to {filepath}")
 
 
 def save_system_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path, timestamp: str) -> None:
@@ -916,7 +925,8 @@ def save_system_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path
         df = pd.DataFrame(csv_data)
         df.to_csv(filepath, index=False, encoding='utf-8')
         
-        print(f"Saved system metrics to {filepath}")
+        logger = get_logger()
+        logger.info(f"Saved system metrics to {filepath}")
 
 
 def append_to_csv(filepath: Path, new_data: List[Dict], mode: str = 'append') -> None:
@@ -1033,7 +1043,8 @@ def append_to_implementations_csv(results: Dict[str, List[BenchmarkResult]], out
     
     # Append to CSV file
     append_to_csv(implementations_file, append_data, mode='append')
-    print(f"Appended implementation metrics to {implementations_file}")
+    logger = get_logger()
+    logger.info(f"Appended implementation metrics to {implementations_file}")
 
 
 def append_to_tasks_csv(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -1130,7 +1141,8 @@ def append_to_tasks_csv(results: Dict[str, List[BenchmarkResult]], output_dir: s
     
     # Append to CSV file
     append_to_csv(tasks_file, append_data, mode='append')
-    print(f"Appended task metrics to {tasks_file}")
+    logger = get_logger()
+    logger.info(f"Appended task metrics to {tasks_file}")
 
 
 def append_to_system_csv(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -1217,4 +1229,5 @@ def append_to_system_csv(results: Dict[str, List[BenchmarkResult]], output_dir: 
     
     # Append to CSV file
     append_to_csv(system_file, append_data, mode='append')
-    print(f"Appended system metrics to {system_file}")
+    logger = get_logger()
+    logger.info(f"Appended system metrics to {system_file}")

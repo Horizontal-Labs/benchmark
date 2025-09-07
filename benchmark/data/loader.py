@@ -5,6 +5,7 @@ Data loading utilities for benchmark data.
 import traceback
 from typing import Tuple, Any, Optional
 from pathlib import Path
+from ..utils.logging_utils import get_logger
 
 # Try to import database components
 try:
@@ -19,6 +20,7 @@ class DataLoader:
     
     def __init__(self):
         self.db_available = DB_AVAILABLE
+        self.logger = get_logger()
     
     def load_benchmark_data(self) -> Tuple[Any, Any, Any]:
         """Load benchmark data from database or fallback to local CSV."""
@@ -26,12 +28,12 @@ class DataLoader:
             try:
                 # Get benchmark data - returns (claims, premises, topics)
                 claims, premises, topics = get_quality_data()
-                print("Successfully loaded database components")
+                self.logger.info("Successfully loaded database components")
                 return claims, premises, topics
             except Exception as e:
-                print(f"Error importing database components: {e}")
-                print(f"Traceback: {traceback.format_exc()}")
-                print("Attempting to load local CSV data as fallback...")
+                self.logger.error(f"Error importing database components: {e}")
+                self.logger.error(f"Traceback: {traceback.format_exc()}")
+                self.logger.warning("Attempting to load local CSV data as fallback...")
         
         # Fallback to local CSV data
         return self._load_local_csv_data()
@@ -40,7 +42,7 @@ class DataLoader:
         """Load local CSV data as fallback."""
         # This would implement loading from local CSV files
         # For now, return empty data structures
-        print("Local CSV loading not implemented yet")
+        self.logger.warning("Local CSV loading not implemented yet")
         return [], [], []
     
     def is_database_available(self) -> bool:
