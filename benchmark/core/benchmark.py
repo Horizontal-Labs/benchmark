@@ -422,5 +422,15 @@ class ArgumentMiningBenchmark:
                     logger.info(f"  {metric_name}: {value:.3f}")
                 for perf_name, value in avg_performance.items():
                     logger.info(f"  {perf_name}: {value:.3f}s")
+                
+                # Print confusion matrix
+                tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+                fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+                fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+                tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+                
+                logger.info(f"  Confusion Matrix:")
+                logger.info(f"    Actual: 0 -> Predicted: 0 = {tn}, Predicted: 1 = {fp}")
+                logger.info(f"    Actual: 1 -> Predicted: 0 = {fn}, Predicted: 1 = {tp}")
         
         logger.info("="*80)

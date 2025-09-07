@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 
 # Core benchmark settings
 DEFAULT_MAX_SAMPLES = 100
-DEFAULT_DISABLE_OPENAI = True
+DEFAULT_DISABLE_OPENAI = False
 DEFAULT_SAVE_CSV = True
 
 # Output and debugging
@@ -33,14 +33,14 @@ DEFAULT_OUTPUT_DIR = 'results'
 
 # Task enable/disable flags (True = enabled by default, False = disabled by default)
 DEFAULT_ENABLE_ADU_EXTRACTION = True
-DEFAULT_ENABLE_STANCE_CLASSIFICATION = False
-DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = False
+DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
+DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
 
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
-DEFAULT_ENABLE_OPENAI = False
+DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
-DEFAULT_ENABLE_MODERNBERT = False
-DEFAULT_ENABLE_DEBERTA = False
+DEFAULT_ENABLE_MODERNBERT = True
+DEFAULT_ENABLE_DEBERTA = True
 
 # Quick presets
 DEFAULT_QUICK_MAX_SAMPLES = 10
@@ -446,6 +446,134 @@ class BenchmarkRunner:
             
             return ""
     
+    def print_detailed_results(self, results: Dict[str, Any]):
+        """Print detailed benchmark results with confusion matrix and metrics in neat tables."""
+        if not results:
+            return
+        
+        if self.console:
+            for task_name, task_results in results.items():
+                if not task_results:
+                    continue
+                
+                # Group results by implementation
+                impl_results = {}
+                for result in task_results:
+                    if result.success:
+                        if result.implementation_name not in impl_results:
+                            impl_results[result.implementation_name] = []
+                        impl_results[result.implementation_name].append(result)
+                
+                if not impl_results:
+                    continue
+                
+                # Create detailed results table for this task
+                task_table = Table(title=f"{task_name.replace('_', ' ').title()} Results", box=box.ROUNDED)
+                task_table.add_column("Implementation", style="cyan", width=15)
+                task_table.add_column("Accuracy", style="green", justify="right")
+                task_table.add_column("Precision", style="green", justify="right")
+                task_table.add_column("Recall", style="green", justify="right")
+                task_table.add_column("F1-Score", style="green", justify="right")
+                task_table.add_column("TP", style="yellow", justify="right")
+                task_table.add_column("FP", style="red", justify="right")
+                task_table.add_column("FN", style="red", justify="right")
+                task_table.add_column("Samples", style="blue", justify="right")
+                
+                for impl_name, impl_result_list in impl_results.items():
+                    if not impl_result_list:
+                        continue
+                    
+                    # Calculate average metrics
+                    import numpy as np
+                    avg_metrics = {}
+                    for metric_name in impl_result_list[0].metrics.keys():
+                        values = [r.metrics[metric_name] for r in impl_result_list if r.success]
+                        avg_metrics[metric_name] = np.mean(values) if values else 0.0
+                    
+                    # Add row to table
+                    task_table.add_row(
+                        impl_name,
+                        f"{avg_metrics.get('accuracy', 0.0):.3f}",
+                        f"{avg_metrics.get('precision', 0.0):.3f}",
+                        f"{avg_metrics.get('recall', 0.0):.3f}",
+                        f"{avg_metrics.get('f1', 0.0):.3f}",
+                        str(avg_metrics.get('tp', 0)),
+                        str(avg_metrics.get('fp', 0)),
+                        str(avg_metrics.get('fn', 0)),
+                        str(len(impl_result_list))
+                    )
+                
+                self.console.print(task_table)
+                
+                # Print confusion matrix for each implementation
+                for impl_name, impl_result_list in impl_results.items():
+                    if not impl_result_list:
+                        continue
+                    
+                    # Create confusion matrix table
+                    cm_table = Table(title=f"{impl_name} - Confusion Matrix", box=box.ROUNDED)
+                    cm_table.add_column("", style="cyan", width=8)
+                    cm_table.add_column("Predicted: 0", style="yellow", justify="right")
+                    cm_table.add_column("Predicted: 1", style="yellow", justify="right")
+                    
+                    # Calculate confusion matrix values
+                    tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+                    fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+                    fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+                    tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+                    
+                    cm_table.add_row("Actual: 0", str(tn), str(fp))
+                    cm_table.add_row("Actual: 1", str(fn), str(tp))
+                    
+                    self.console.print(cm_table)
+        else:
+            # Fallback for when Rich is not available
+            print("\nDetailed Benchmark Results:")
+            print("=" * 80)
+            
+            for task_name, task_results in results.items():
+                if not task_results:
+                    continue
+                
+                print(f"\n{task_name.replace('_', ' ').title()} Results:")
+                print("-" * 50)
+                
+                # Group results by implementation
+                impl_results = {}
+                for result in task_results:
+                    if result.success:
+                        if result.implementation_name not in impl_results:
+                            impl_results[result.implementation_name] = []
+                        impl_results[result.implementation_name].append(result)
+                
+                for impl_name, impl_result_list in impl_results.items():
+                    if not impl_result_list:
+                        continue
+                    
+                    # Calculate average metrics
+                    import numpy as np
+                    avg_metrics = {}
+                    for metric_name in impl_result_list[0].metrics.keys():
+                        values = [r.metrics[metric_name] for r in impl_result_list if r.success]
+                        avg_metrics[metric_name] = np.mean(values) if values else 0.0
+                    
+                    print(f"\n{impl_name}:")
+                    print(f"  Accuracy:  {avg_metrics.get('accuracy', 0.0):.3f}")
+                    print(f"  Precision: {avg_metrics.get('precision', 0.0):.3f}")
+                    print(f"  Recall:    {avg_metrics.get('recall', 0.0):.3f}")
+                    print(f"  F1-Score:  {avg_metrics.get('f1', 0.0):.3f}")
+                    print(f"  Samples:   {len(impl_result_list)}")
+                    
+                    # Confusion matrix
+                    tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+                    fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+                    fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+                    tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+                    
+                    print(f"  Confusion Matrix:")
+                    print(f"    Actual: 0 -> Predicted: 0 = {tn}, Predicted: 1 = {fp}")
+                    print(f"    Actual: 1 -> Predicted: 0 = {fn}, Predicted: 1 = {tp}")
+
     def print_summary(self, results: Dict[str, Any]):
         """Print a summary of the benchmark results."""
         if not results:
@@ -523,6 +651,9 @@ class BenchmarkRunner:
             
             # Save results
             output_path = self.save_results(results)
+            
+            # Print detailed results with confusion matrix and metrics
+            self.print_detailed_results(results)
             
             # Print summary
             self.print_summary(results)

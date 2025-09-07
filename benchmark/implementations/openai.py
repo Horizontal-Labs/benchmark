@@ -14,8 +14,15 @@ try:
     from argmining.implementations.openai_llm_classifier import OpenAILLMClassifier
     from argmining.implementations.openai_claim_premise_linker import OpenAIClaimPremiseLinker
     OPENAI_AVAILABLE = True
-except ImportError:
+    IMPORT_ERROR = None
+except ImportError as e:
     OPENAI_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+    # Try to provide more helpful error message
+    if "relative import" in str(e).lower():
+        IMPORT_ERROR = f"Relative import issue: {e}. This is likely due to the external API's import structure."
+    else:
+        IMPORT_ERROR = f"Import failed: {e}"
 
 
 class OpenAIImplementation(BaseImplementation):
@@ -28,7 +35,7 @@ class OpenAIImplementation(BaseImplementation):
     def initialize(self) -> bool:
         """Initialize OpenAI implementation."""
         if not OPENAI_AVAILABLE:
-            log_initialization(self.logger, "OpenAI", "failed", "OpenAI components not available")
+            log_initialization(self.logger, "OpenAI", "failed", f"Import error: {IMPORT_ERROR}")
             return False
         
         try:

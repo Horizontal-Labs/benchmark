@@ -12,8 +12,15 @@ from ..utils.logging_utils import get_logger, log_initialization
 try:
     from argmining.implementations.encoder_model_loader import NonTrainedEncoderModelLoader, MODEL_CONFIGS
     DEBERTA_AVAILABLE = True
-except ImportError:
+    IMPORT_ERROR = None
+except ImportError as e:
     DEBERTA_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+    # Try to provide more helpful error message
+    if "relative import" in str(e).lower():
+        IMPORT_ERROR = f"Relative import issue: {e}. This is likely due to the external API's import structure."
+    else:
+        IMPORT_ERROR = f"Import failed: {e}"
 
 
 class DeBERTaImplementation(BaseImplementation):
@@ -26,7 +33,7 @@ class DeBERTaImplementation(BaseImplementation):
     def initialize(self) -> bool:
         """Initialize DeBERTa implementation."""
         if not DEBERTA_AVAILABLE:
-            log_initialization(self.logger, "DeBERTa", "failed", "DeBERTa components not available")
+            log_initialization(self.logger, "DeBERTa", "failed", f"Import error: {IMPORT_ERROR}")
             return False
         
         try:
