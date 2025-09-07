@@ -43,13 +43,18 @@ class ClaimPremiseLinkingTask(BaseTask):
         
         return data
     
-    def run_benchmark(self, implementation, data: List[Dict[str, Any]]) -> List[BenchmarkResult]:
+    def run_benchmark(self, implementation, data: List[Dict[str, Any]], progress_bar=None) -> List[BenchmarkResult]:
         """Run the claim-premise linking benchmark."""
         results = []
         linker = implementation.get_linker()
         
         if not linker:
             return results
+        
+        # Create progress bar for this implementation if not provided
+        if progress_bar is None:
+            from tqdm import tqdm
+            progress_bar = tqdm(total=len(data), desc=f"Claim-Premise Linking - {implementation.name}", unit="sample")
         
         for i, sample in enumerate(data):
             try:
@@ -107,6 +112,9 @@ class ClaimPremiseLinkingTask(BaseTask):
                 )
                 results.append(result)
                 
+                # Update progress bar
+                progress_bar.update(1)
+                
             except Exception as e:
                 # Create error result
                 result = BenchmarkResult(
@@ -122,6 +130,13 @@ class ClaimPremiseLinkingTask(BaseTask):
                     success=False
                 )
                 results.append(result)
+                
+                # Update progress bar
+                progress_bar.update(1)
+        
+        # Close progress bar if we created it
+        if progress_bar and hasattr(progress_bar, 'close'):
+            progress_bar.close()
         
         return results
     

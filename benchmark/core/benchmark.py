@@ -23,6 +23,7 @@ from pathlib import Path
 from datetime import datetime
 import warnings
 import traceback
+from tqdm import tqdm
 
 warnings.filterwarnings('ignore')
 
@@ -56,21 +57,29 @@ from ..tasks import (
 )
 from ..data import DataLoader
 from ..utils.file_handlers import save_results_to_csv, save_comprehensive_results_csv
+from ..utils.logging_utils import get_logger, log_initialization, log_benchmark_progress
 from .results import BenchmarkResult
 
-print("Successfully imported argument mining components")
+# Initialize logger
+logger = get_logger()
+logger.info("Successfully imported argument mining components")
 
 
 class ArgumentMiningBenchmark:
     """Enhanced benchmark for argument mining implementations with task-specific data preparation."""
 
-    def __init__(self, max_samples: int = 100, disable_openai: bool = False):
+    def __init__(self, max_samples: int = 100, disable_openai: bool = False, 
+                 disable_tinyllama: bool = False, disable_modernbert: bool = False, 
+                 disable_deberta: bool = False):
         """
         Initialize the benchmark.
         
         Args:
             max_samples: Maximum number of samples to use for benchmarking (default: 100)
             disable_openai: If True, skip OpenAI implementation initialization (default: False)
+            disable_tinyllama: If True, skip TinyLlama implementation initialization (default: False)
+            disable_modernbert: If True, skip ModernBERT implementation initialization (default: False)
+            disable_deberta: If True, skip DeBERTa implementation initialization (default: False)
         """
         self.data = {}
         self.results = []
@@ -78,6 +87,9 @@ class ArgumentMiningBenchmark:
         self.tasks = {}
         self.max_samples = max_samples
         self.disable_openai = disable_openai
+        self.disable_tinyllama = disable_tinyllama
+        self.disable_modernbert = disable_modernbert
+        self.disable_deberta = disable_deberta
         self.execution_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Check environment variables
@@ -92,19 +104,29 @@ class ArgumentMiningBenchmark:
         # Load benchmark data for all tasks
         self._load_benchmark_data()
         
-        print(f"Initialized benchmark with max_samples: {self.max_samples}")
+        logger.info(f"Initialized benchmark with max_samples: {self.max_samples}")
+        disabled_implementations = []
         if self.disable_openai:
-            print("OpenAI implementations disabled")
-        print(f"Available implementations: {list(self.implementations.keys())}")
-        print(f"Available tasks: {list(self.tasks.keys())}")
+            disabled_implementations.append("OpenAI")
+        if self.disable_tinyllama:
+            disabled_implementations.append("TinyLlama")
+        if self.disable_modernbert:
+            disabled_implementations.append("ModernBERT")
+        if self.disable_deberta:
+            disabled_implementations.append("DeBERTa")
+        
+        if disabled_implementations:
+            logger.info(f"Disabled implementations: {', '.join(disabled_implementations)}")
+        logger.info(f"Available implementations: {list(self.implementations.keys())}")
+        logger.info(f"Available tasks: {list(self.tasks.keys())}")
     
     def _check_environment(self):
         """Check if required environment variables are set."""
         openai_key = os.getenv("OPEN_AI_KEY")
         if not openai_key:
-            print("OPEN_AI_KEY environment variable not set. OpenAI implementations may fail.")
+            logger.warning("OPEN_AI_KEY environment variable not set. OpenAI implementations may fail.")
         else:
-            print("OPEN_AI_KEY environment variable found")
+            logger.info("OPEN_AI_KEY environment variable found")
     
     def _initialize_implementations(self):
         """Initialize all available implementations."""
@@ -116,36 +138,55 @@ class ArgumentMiningBenchmark:
                 openai_impl = OpenAIImplementation()
                 if openai_impl.initialize():
                     implementations['openai'] = openai_impl
-                    print("Initialized OpenAI implementation")
+                    log_initialization(logger, "OpenAI implementation", "success")
+                else:
+                    log_initialization(logger, "OpenAI implementation", "failed", "Initialization returned False")
             except Exception as e:
-                print(f"Failed to initialize OpenAI implementation: {e}")
+                log_initialization(logger, "OpenAI implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "OpenAI implementation", "disabled")
         
         # TinyLlama implementation
-        try:
-            tinyllama_impl = TinyLlamaImplementation()
-            if tinyllama_impl.initialize():
-                implementations['tinyllama'] = tinyllama_impl
-                print("Initialized TinyLlama implementation")
-        except Exception as e:
-            print(f"Failed to initialize TinyLlama implementation: {e}")
+        if not self.disable_tinyllama:
+            try:
+                tinyllama_impl = TinyLlamaImplementation()
+                if tinyllama_impl.initialize():
+                    implementations['tinyllama'] = tinyllama_impl
+                    log_initialization(logger, "TinyLlama implementation", "success")
+                else:
+                    log_initialization(logger, "TinyLlama implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "TinyLlama implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "TinyLlama implementation", "disabled")
         
         # ModernBERT implementation
-        try:
-            modernbert_impl = ModernBERTImplementation()
-            if modernbert_impl.initialize():
-                implementations['modernbert'] = modernbert_impl
-                print("Initialized ModernBERT implementation")
-        except Exception as e:
-            print(f"Failed to initialize ModernBERT implementation: {e}")
+        if not self.disable_modernbert:
+            try:
+                modernbert_impl = ModernBERTImplementation()
+                if modernbert_impl.initialize():
+                    implementations['modernbert'] = modernbert_impl
+                    log_initialization(logger, "ModernBERT implementation", "success")
+                else:
+                    log_initialization(logger, "ModernBERT implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "ModernBERT implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "ModernBERT implementation", "disabled")
         
         # DeBERTa implementation
-        try:
-            deberta_impl = DeBERTaImplementation()
-            if deberta_impl.initialize():
-                implementations['deberta'] = deberta_impl
-                print("Initialized DeBERTa implementation")
-        except Exception as e:
-            print(f"Failed to initialize DeBERTa implementation: {e}")
+        if not self.disable_deberta:
+            try:
+                deberta_impl = DeBERTaImplementation()
+                if deberta_impl.initialize():
+                    implementations['deberta'] = deberta_impl
+                    log_initialization(logger, "DeBERTa implementation", "success")
+                else:
+                    log_initialization(logger, "DeBERTa implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "DeBERTa implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "DeBERTa implementation", "disabled")
         
         self.implementations = implementations
     
@@ -170,21 +211,32 @@ class ArgumentMiningBenchmark:
                 'claim_premise_linking': self.tasks['claim_premise_linking'].prepare_data((claims, premises, topics))
             }
             
-            print(f"Loaded benchmark data for all tasks")
+            logger.info(f"Loaded benchmark data for all tasks")
             for task, task_data in self.data.items():
-                print(f"  {task}: {len(task_data)} samples")
+                logger.info(f"  {task}: {len(task_data)} samples")
                 
         except Exception as e:
-            print(f"Failed to load benchmark data: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Failed to load benchmark data: {e}")
+            logger.debug(f"Traceback: {traceback.format_exc()}")
     
     def run_benchmark(self) -> Dict[str, List[BenchmarkResult]]:
         """Run the complete benchmark suite."""
         all_results = {}
         
+        # Calculate total number of task-implementation combinations
+        total_combinations = 0
         for task_name in self.tasks.keys():
-            task_results = self.run_single_task(task_name)
-            all_results[task_name] = task_results
+            for impl_name, implementation in self.implementations.items():
+                if implementation.supports_task(task_name):
+                    total_combinations += 1
+        
+        logger.info(f"Running benchmark with {total_combinations} task-implementation combinations...")
+        
+        # Create overall progress bar
+        with tqdm(total=total_combinations, desc="Overall Progress", unit="combination") as pbar:
+            for task_name in self.tasks.keys():
+                task_results = self.run_single_task(task_name, progress_bar=pbar)
+                all_results[task_name] = task_results
         
         # Save results in organized subdirectories
         self.save_results(all_results, comprehensive=True, individual=True)
@@ -261,7 +313,7 @@ class ArgumentMiningBenchmark:
         """Get the current execution timestamp."""
         return self.execution_date
     
-    def run_single_task(self, task_name: str, implementation_name: str = None) -> List[BenchmarkResult]:
+    def run_single_task(self, task_name: str, implementation_name: str = None, progress_bar=None) -> List[BenchmarkResult]:
         """Run benchmark for a single task."""
         if task_name not in self.tasks:
             print(f"Unknown task: {task_name}")
@@ -285,12 +337,17 @@ class ArgumentMiningBenchmark:
                 continue
             
             if not implementation.supports_task(task_name):
-                print(f"Implementation {impl_name} does not support task {task_name}")
+                if progress_bar:
+                    progress_bar.update(1)
                 continue
             
             print(f"Running {task_name} with {impl_name} implementation...")
-            results = task.run_benchmark(implementation, task_data)
+            results = task.run_benchmark(implementation, task_data, progress_bar=progress_bar)
             all_results.extend(results)
+            
+            # Update progress bar
+            if progress_bar:
+                progress_bar.update(1)
         
         return all_results
     

@@ -12,7 +12,7 @@ load_dotenv()
 # Add the app directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
 
-from app.log import log
+from app.log import logger
 
 
 class TestOpenAIAPI:
@@ -24,7 +24,7 @@ class TestOpenAIAPI:
         assert api_key is not None, "OPEN_AI_KEY environment variable is not set"
         assert len(api_key) > 0, "OPEN_AI_KEY environment variable is empty"
         assert api_key.startswith('sk-'), "OPEN_AI_KEY should start with 'sk-'"
-        log.info("✓ OpenAI API key is properly configured")
+        logger.info("✓ OpenAI API key is properly configured")
     
     def test_openai_api_connection(self):
         """Test that we can connect to the OpenAI API and make a simple request."""
@@ -56,7 +56,7 @@ class TestOpenAIAPI:
             assert content is not None, "Response content is None"
             assert len(content) > 0, "Response content is empty"
             
-            log.info(f"✓ OpenAI API connection successful. Response: {content}")
+            logger.info(f"✓ OpenAI API connection successful. Response: {content}")
             
         except openai.AuthenticationError as e:
             pytest.fail(f"OpenAI API authentication failed: {e}")
@@ -93,7 +93,7 @@ class TestOpenAIAPI:
             required_models = ['gpt-3.5-turbo', 'gpt-4']
             available_models = [model for model in required_models if model in model_ids]
             
-            log.info(f"✓ OpenAI API models available. Found {len(available_models)}/{len(required_models)} required models: {available_models}")
+            logger.info(f"✓ OpenAI API models available. Found {len(available_models)}/{len(required_models)} required models: {available_models}")
             
         except openai.AuthenticationError as e:
             pytest.fail(f"OpenAI API authentication failed: {e}")
@@ -120,7 +120,7 @@ class TestOpenAIAPI:
             assert hasattr(classifier, 'client'), "OpenAILLMClassifier missing 'client' attribute"
             assert classifier.client is not None, "OpenAI client is None"
             
-            log.info("✓ OpenAI LLM classifier initialized successfully")
+            logger.info("✓ OpenAI LLM classifier initialized successfully")
             
         except Exception as e:
             pytest.fail(f"Failed to initialize OpenAI LLM classifier: {e}\n{traceback.format_exc()}")
@@ -148,7 +148,7 @@ class TestOpenAIAPI:
             assert result is not None, "Classification result is None"
             assert result in ['claim', 'premise'], f"Unexpected classification result: {result}"
             
-            log.info(f"✓ OpenAI LLM classifier classification successful. Result: {result}")
+            logger.info(f"✓ OpenAI LLM classifier classification successful. Result: {result}")
             
         except Exception as e:
             pytest.fail(f"Failed to perform classification with OpenAI LLM classifier: {e}\n{traceback.format_exc()}")
@@ -170,7 +170,7 @@ class TestOpenAIAPI:
                 messages=[{"role": "user", "content": "test"}]
             )
         
-        log.info("✓ OpenAI API authentication error handling works correctly")
+        logger.info("✓ OpenAI API authentication error handling works correctly")
     
     @patch('openai.OpenAI')
     def test_openai_api_mock_rate_limit_error(self, mock_openai):
@@ -189,7 +189,7 @@ class TestOpenAIAPI:
                 messages=[{"role": "user", "content": "test"}]
             )
         
-        log.info("✓ OpenAI API rate limit error handling works correctly")
+        logger.info("✓ OpenAI API rate limit error handling works correctly")
 
 
 def run_openai_api_tests():

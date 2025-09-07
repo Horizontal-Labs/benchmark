@@ -21,7 +21,7 @@ sys.path.insert(0, str(project_root))
 # Import the benchmark module
 from app.benchmark import ArgumentMiningBenchmark, BenchmarkResult
 from app.db_connector.db.models import ADU
-from app.log import log
+from app.log import logger
 from app.argmining.models.argument_units import ArgumentUnit, UnlinkedArgumentUnits, LinkedArgumentUnits
 
 
@@ -506,7 +506,7 @@ class TestOpenAIAPI:
         assert api_key is not None, "OPEN_AI_KEY environment variable is not set"
         assert len(api_key) > 0, "OPEN_AI_KEY environment variable is empty"
         assert api_key.startswith('sk-'), "OPEN_AI_KEY should start with 'sk-'"
-        log.info("✓ OpenAI API key is properly configured")
+        logger.info("✓ OpenAI API key is properly configured")
     
     def test_openai_api_connection(self):
         """Test that we can connect to the OpenAI API and make a simple request."""
@@ -540,7 +540,7 @@ class TestOpenAIAPI:
             assert content is not None, "Response content is None"
             assert len(content) > 0, "Response content is empty"
             
-            log.info(f"✓ OpenAI API connection successful. Response: {content}")
+            logger.info(f"✓ OpenAI API connection successful. Response: {content}")
             
         except openai.AuthenticationError as e:
             pytest.fail(f"OpenAI API authentication failed: {e}")
@@ -564,7 +564,7 @@ class TestOpenAIAPI:
             assert hasattr(classifier, 'client'), "OpenAILLMClassifier missing 'client' attribute"
             assert classifier.client is not None, "OpenAI client is None"
             
-            log.info("✓ OpenAI LLM classifier initialized successfully")
+            logger.info("✓ OpenAI LLM classifier initialized successfully")
             
         except Exception as e:
             pytest.fail(f"Failed to initialize OpenAI LLM classifier: {e}")
@@ -585,7 +585,7 @@ class TestOpenAIAPI:
             assert result is not None, "Classification result is None"
             assert result in ['claim', 'premise'], f"Unexpected classification result: {result}"
             
-            log.info(f"✓ OpenAI LLM classifier classification successful. Result: {result}")
+            logger.info(f"✓ OpenAI LLM classifier classification successful. Result: {result}")
             
         except Exception as e:
             pytest.fail(f"Failed to perform classification with OpenAI LLM classifier: {e}")
@@ -816,7 +816,7 @@ class TestImplementationFallbackStrategies:
             assert isinstance(result.claims, list)
             assert isinstance(result.premises, list)
             
-            log.info(f"✓ OpenAI implementation extracted {len(result.claims)} claims and {len(result.premises)} premises")
+            logger.info(f"✓ OpenAI implementation extracted {len(result.claims)} claims and {len(result.premises)} premises")
             
         except Exception as e:
             pytest.skip(f"OpenAI implementation test failed: {e}")
@@ -844,7 +844,7 @@ class TestImplementationFallbackStrategies:
                 assert isinstance(result.claims, list)
                 assert isinstance(result.premises, list)
                 
-                log.info(f"✓ TinyLlama implementation extracted {len(result.claims)} claims and {len(result.premises)} premises without fallback")
+                logger.info(f"✓ TinyLlama implementation extracted {len(result.claims)} claims and {len(result.premises)} premises without fallback")
                 
         except Exception as e:
             pytest.skip(f"TinyLlama implementation test failed: {e}")
@@ -869,7 +869,7 @@ class TestImplementationFallbackStrategies:
             assert isinstance(result, list)
             # Note: Result might be empty if no ADUs are identified, which is acceptable
             
-            log.info(f"✓ ModernBERT implementation identified {len(result)} ADUs without fallback")
+            logger.info(f"✓ ModernBERT implementation identified {len(result)} ADUs without fallback")
             
         except Exception as e:
             pytest.skip(f"ModernBERT implementation test failed: {e}")
@@ -895,7 +895,7 @@ class TestImplementationFallbackStrategies:
             assert isinstance(result.claims, list)
             assert isinstance(result.premises, list)
             
-            log.info(f"✓ DeBERTa implementation classified {len(result.claims)} claims and {len(result.premises)} premises")
+            logger.info(f"✓ DeBERTa implementation classified {len(result.claims)} claims and {len(result.premises)} premises")
             
         except Exception as e:
             pytest.skip(f"DeBERTa implementation test failed: {e}")
@@ -921,7 +921,7 @@ class TestImplementationFallbackStrategies:
             assert hasattr(result, 'claims_premises_relationships')
             assert isinstance(result.claims_premises_relationships, list)
             
-            log.info(f"✓ OpenAI linker created {len(result.claims_premises_relationships)} relationships")
+            logger.info(f"✓ OpenAI linker created {len(result.claims_premises_relationships)} relationships")
             
         except Exception as e:
             pytest.skip(f"OpenAI linker implementation test failed: {e}")
@@ -941,7 +941,7 @@ class TestImplementationFallbackStrategies:
                 # Test each available implementation
                 for impl_name, impl_config in benchmark.implementations.items():
                     if impl_config['adu_classifier']:
-                        log.info(f"Testing implementation: {impl_name}")
+                        logger.info(f"Testing implementation: {impl_name}")
                         
                         # For TinyLlama, mock the fallback method
                         if impl_name == 'tinyllama':
@@ -959,9 +959,9 @@ class TestImplementationFallbackStrategies:
                         assert len(results) > 0, f"No results for {impl_name}"
                         assert all(r.success for r in results), f"Some results failed for {impl_name}"
                         
-                        log.info(f"✓ {impl_name} implementation passed benchmark test")
+                        logger.info(f"✓ {impl_name} implementation passed benchmark test")
                 
-                log.info("✓ All implementations passed benchmark tests")
+                logger.info("✓ All implementations passed benchmark tests")
                 
         except Exception as e:
             pytest.skip(f"Benchmark with implementations test failed: {e}")

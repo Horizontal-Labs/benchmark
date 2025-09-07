@@ -40,13 +40,18 @@ class ADUExtractionTask(BaseTask):
         
         return data
     
-    def run_benchmark(self, implementation, data: List[Dict[str, Any]]) -> List[BenchmarkResult]:
+    def run_benchmark(self, implementation, data: List[Dict[str, Any]], progress_bar=None) -> List[BenchmarkResult]:
         """Run the ADU extraction benchmark."""
         results = []
         adu_classifier = implementation.get_adu_classifier()
         
         if not adu_classifier:
             return results
+        
+        # Create progress bar for this implementation if not provided
+        if progress_bar is None:
+            from tqdm import tqdm
+            progress_bar = tqdm(total=len(data), desc=f"ADU Extraction - {implementation.name}", unit="sample")
         
         for i, sample in enumerate(data):
             try:
@@ -74,6 +79,9 @@ class ADUExtractionTask(BaseTask):
                 )
                 results.append(result)
                 
+                # Update progress bar
+                progress_bar.update(1)
+                
             except Exception as e:
                 # Create error result
                 result = BenchmarkResult(
@@ -89,6 +97,13 @@ class ADUExtractionTask(BaseTask):
                     success=False
                 )
                 results.append(result)
+                
+                # Update progress bar
+                progress_bar.update(1)
+        
+        # Close progress bar if we created it
+        if progress_bar and hasattr(progress_bar, 'close'):
+            progress_bar.close()
         
         return results
     

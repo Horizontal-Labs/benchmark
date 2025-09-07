@@ -32,7 +32,7 @@ benchmark/
 │   └── evaluator.py            # Metrics evaluation utilities
 └── utils/                      # Utility functions and helpers
     ├── __init__.py
-    ├── logging.py              # Logging utilities
+    ├── logging_utils.py        # Logging utilities
     └── file_handlers.py        # File I/O operations
 ```
 

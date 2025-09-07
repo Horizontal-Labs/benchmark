@@ -19,7 +19,7 @@ class BaseTask(ABC):
         pass
     
     @abstractmethod
-    def run_benchmark(self, implementation, data: List[Dict[str, Any]]) -> List[BenchmarkResult]:
+    def run_benchmark(self, implementation, data: List[Dict[str, Any]], progress_bar=None) -> List[BenchmarkResult]:
         """Run the benchmark for this task with the given implementation."""
         pass
     

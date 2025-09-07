@@ -2,7 +2,7 @@
 Utility functions and helpers.
 """
 
-from .logging import setup_logging
+from .logging_utils import setup_logging
 from .file_handlers import save_results_to_csv
 
 __all__ = [

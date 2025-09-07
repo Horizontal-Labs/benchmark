@@ -36,7 +36,7 @@ try:
         run_single_implementation_benchmark,
         run_full_benchmark
     )
-    from app.log import log as logger
+    from app.log import logger as logger
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
     print(f"Warning: Some imports failed: {e}")

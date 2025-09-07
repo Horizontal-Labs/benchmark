@@ -11,8 +11,15 @@ from .base import BaseImplementation
 try:
     from argmining.implementations.tinyllama_llm_classifier import TinyLLamaLLMClassifier
     TINYLLAMA_AVAILABLE = True
-except ImportError:
+    IMPORT_ERROR = None
+except ImportError as e:
     TINYLLAMA_AVAILABLE = False
+    IMPORT_ERROR = str(e)
+    # Try to provide more helpful error message
+    if "relative import" in str(e).lower():
+        IMPORT_ERROR = f"Relative import issue: {e}. This is likely due to the external API's import structure."
+    else:
+        IMPORT_ERROR = f"Import failed: {e}"
 
 
 class TinyLlamaImplementation(BaseImplementation):
@@ -24,6 +31,7 @@ class TinyLlamaImplementation(BaseImplementation):
     def initialize(self) -> bool:
         """Initialize TinyLlama implementation."""
         if not TINYLLAMA_AVAILABLE:
+            print(f"TinyLlama not available due to import error: {IMPORT_ERROR}")
             return False
         
         try:

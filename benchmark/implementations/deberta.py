@@ -39,8 +39,7 @@ class DeBERTaImplementation(BaseImplementation):
             
             # Initialize components
             self.adu_classifier = NonTrainedEncoderModelLoader(model_paths=model_paths)
-            # DeBERTa doesn't have linking capability
-            self.linker = None
+            # DeBERTa doesn't have            self.linker = None
             
             return True
         except Exception as e:

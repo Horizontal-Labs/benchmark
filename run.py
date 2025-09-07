@@ -1,95 +1,646 @@
+#!/usr/bin/env python3
+"""
+Enhanced run file for the Argument Mining Benchmark with progress bars and debugging options.
+
+This file provides an easy way to execute and debug the benchmark with all available flags.
+It includes progress bars for overall progress and individual implementation progress.
+"""
+
 import sys
+import os
 import argparse
-from app.benchmark import (
-    run_full_benchmark, 
-    run_single_task_benchmark, 
-    run_single_implementation_benchmark
-)
+import time
+from pathlib import Path
+from typing import Optional, List, Dict, Any
+import warnings
+
+# Suppress warnings for cleaner output
+warnings.filterwarnings('ignore')
+
+# =============================================================================
+# DEFAULT CONFIGURATION - Modify these variables to change default behavior
+# =============================================================================
+
+# Core benchmark settings
+DEFAULT_MAX_SAMPLES = 100
+DEFAULT_DISABLE_OPENAI = True
+DEFAULT_SAVE_CSV = True
+
+# Output and debugging
+DEFAULT_VERBOSE = False
+DEFAULT_DEBUG = False
+DEFAULT_OUTPUT_DIR = 'results'
+
+# Task enable/disable flags (True = enabled by default, False = disabled by default)
+DEFAULT_ENABLE_ADU_EXTRACTION = True
+DEFAULT_ENABLE_STANCE_CLASSIFICATION = False
+DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = False
+
+# Implementation enable/disable flags (True = enabled by default, False = disabled by default)
+DEFAULT_ENABLE_OPENAI = False
+DEFAULT_ENABLE_TINYLLAMA = True
+DEFAULT_ENABLE_MODERNBERT = False
+DEFAULT_ENABLE_DEBERTA = False
+
+# Quick presets
+DEFAULT_QUICK_MAX_SAMPLES = 10
+DEFAULT_FULL_MAX_SAMPLES = 1000
+
+# =============================================================================
+
+# Add the benchmark package to the path
+benchmark_path = Path(__file__).parent / "benchmark"
+sys.path.insert(0, str(benchmark_path))
+
+# Import progress bar libraries
+try:
+    from tqdm import tqdm
+    from rich.console import Console
+    from rich.progress import Progress, TaskID, BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich.live import Live
+    from rich import box
+    PROGRESS_AVAILABLE = True
+except ImportError:
+    print("Warning: Rich and tqdm not available. Install with: pip install rich tqdm")
+    PROGRESS_AVAILABLE = False
+
+from benchmark.core.benchmark import ArgumentMiningBenchmark
+from benchmark.utils.logging_utils import setup_logging, get_logger, log_initialization, log_benchmark_progress
+
+
+def get_default_task_filter() -> Optional[List[str]]:
+    """Get default task filter based on enabled tasks."""
+    tasks = []
+    if DEFAULT_ENABLE_ADU_EXTRACTION:
+        tasks.append('adu_extraction')
+    if DEFAULT_ENABLE_STANCE_CLASSIFICATION:
+        tasks.append('stance_classification')
+    if DEFAULT_ENABLE_CLAIM_PREMISE_LINKING:
+        tasks.append('claim_premise_linking')
+    return tasks if tasks else None
+
+
+def get_default_implementation_filter() -> Optional[List[str]]:
+    """Get default implementation filter based on enabled implementations."""
+    implementations = []
+    if DEFAULT_ENABLE_OPENAI:
+        implementations.append('openai')
+    if DEFAULT_ENABLE_TINYLLAMA:
+        implementations.append('tinyllama')
+    if DEFAULT_ENABLE_MODERNBERT:
+        implementations.append('modernbert')
+    if DEFAULT_ENABLE_DEBERTA:
+        implementations.append('deberta')
+    return implementations if implementations else None
+
+
+class BenchmarkRunner:
+    """Enhanced benchmark runner with progress bars and debugging capabilities."""
+    
+    def __init__(self, 
+                 max_samples: int = 100,
+                 disable_openai: bool = True,
+                 disable_tinyllama: bool = False,
+                 disable_modernbert: bool = False,
+                 disable_deberta: bool = False,
+                 save_csv: bool = True,
+                 verbose: bool = False,
+                 debug: bool = False,
+                 task_filter: Optional[List[str]] = None,
+                 implementation_filter: Optional[List[str]] = None,
+                 output_dir: str = "results"):
+        """
+        Initialize the benchmark runner.
+        
+        Args:
+            max_samples: Maximum number of samples to use for benchmarking
+            disable_openai: If True, skip OpenAI implementation
+            disable_tinyllama: If True, skip TinyLlama implementation
+            disable_modernbert: If True, skip ModernBERT implementation
+            disable_deberta: If True, skip DeBERTa implementation
+            save_csv: Whether to save results to CSV files
+            verbose: Enable verbose output
+            debug: Enable debug mode with detailed logging
+            task_filter: List of specific tasks to run (None for all)
+            implementation_filter: List of specific implementations to run (None for all)
+            output_dir: Output directory for results
+        """
+        self.max_samples = max_samples
+        self.disable_openai = disable_openai
+        self.disable_tinyllama = disable_tinyllama
+        self.disable_modernbert = disable_modernbert
+        self.disable_deberta = disable_deberta
+        self.save_csv = save_csv
+        self.verbose = verbose
+        self.debug = debug
+        self.task_filter = task_filter
+        self.implementation_filter = implementation_filter
+        self.output_dir = output_dir
+        
+        # Initialize logging
+        log_level = "DEBUG" if debug else ("INFO" if verbose else "WARNING")
+        self.logger = setup_logging(
+            log_level=log_level,
+            log_file=os.path.join(output_dir, "benchmark.log") if debug else None,
+            progress_bar_compatible=True
+        )
+        
+        # Initialize console for rich output
+        self.console = Console() if PROGRESS_AVAILABLE else None
+        
+        # Benchmark instance
+        self.benchmark = None
+        
+    def print_configuration(self):
+        """Print the current configuration."""
+        if self.console:
+            config_table = Table(title="Benchmark Configuration", box=box.ROUNDED)
+            config_table.add_column("Setting", style="cyan")
+            config_table.add_column("Value", style="green")
+            
+            config_table.add_row("Max Samples", str(self.max_samples))
+            config_table.add_row("OpenAI Disabled", str(self.disable_openai))
+            config_table.add_row("TinyLlama Disabled", str(self.disable_tinyllama))
+            config_table.add_row("ModernBERT Disabled", str(self.disable_modernbert))
+            config_table.add_row("DeBERTa Disabled", str(self.disable_deberta))
+            config_table.add_row("Save CSV", str(self.save_csv))
+            config_table.add_row("Verbose", str(self.verbose))
+            config_table.add_row("Debug", str(self.debug))
+            config_table.add_row("Task Filter", str(self.task_filter) if self.task_filter else "All tasks")
+            config_table.add_row("Implementation Filter", str(self.implementation_filter) if self.implementation_filter else "All implementations")
+            config_table.add_row("Output Directory", self.output_dir)
+            
+            self.console.print(config_table)
+        else:
+            print("Benchmark Configuration:")
+            print(f"  Max Samples: {self.max_samples}")
+            print(f"  OpenAI Disabled: {self.disable_openai}")
+            print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
+            print(f"  ModernBERT Disabled: {self.disable_modernbert}")
+            print(f"  DeBERTa Disabled: {self.disable_deberta}")
+            print(f"  Save CSV: {self.save_csv}")
+            print(f"  Verbose: {self.verbose}")
+            print(f"  Debug: {self.debug}")
+            print(f"  Task Filter: {self.task_filter if self.task_filter else 'All tasks'}")
+            print(f"  Implementation Filter: {self.implementation_filter if self.implementation_filter else 'All implementations'}")
+            print(f"  Output Directory: {self.output_dir}")
+    
+    def initialize_benchmark(self) -> bool:
+        """Initialize the benchmark and return success status."""
+        try:
+            if self.verbose:
+                if self.console:
+                    self.console.print("\n[bold blue]Initializing benchmark...[/bold blue]")
+                else:
+                    print("Initializing benchmark...")
+            
+            self.benchmark = ArgumentMiningBenchmark(
+                max_samples=self.max_samples,
+                disable_openai=self.disable_openai,
+                disable_tinyllama=self.disable_tinyllama,
+                disable_modernbert=self.disable_modernbert,
+                disable_deberta=self.disable_deberta
+            )
+            
+            if self.verbose:
+                if self.console:
+                    self.console.print("[green]✓ Benchmark initialized successfully[/green]")
+                    self.console.print(f"Available implementations: {list(self.benchmark.implementations.keys())}")
+                    self.console.print(f"Available tasks: {list(self.benchmark.tasks.keys())}")
+                else:
+                    print("✓ Benchmark initialized successfully")
+                    print(f"Available implementations: {list(self.benchmark.implementations.keys())}")
+                    print(f"Available tasks: {list(self.benchmark.tasks.keys())}")
+            
+            return True
+            
+        except Exception as e:
+            error_msg = f"Failed to initialize benchmark: {e}"
+            if self.console:
+                self.console.print(f"[red]✗ {error_msg}[/red]")
+            else:
+                print(f"✗ {error_msg}")
+            
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            
+            return False
+    
+    def run_full_benchmark_with_progress(self) -> Dict[str, Any]:
+        """Run the complete benchmark with progress bars."""
+        if not self.benchmark:
+            return {}
+        
+        # Determine which tasks to run
+        tasks_to_run = self.task_filter if self.task_filter else list(self.benchmark.tasks.keys())
+        
+        # Determine which implementations to run
+        implementations_to_run = self.implementation_filter if self.implementation_filter else list(self.benchmark.implementations.keys())
+        
+        # Calculate total work
+        total_combinations = len(tasks_to_run) * len(implementations_to_run)
+        
+        if self.console:
+            # Create progress display
+            with Progress(
+                TextColumn("[bold blue]{task.description}"),
+                BarColumn(),
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                "•",
+                TextColumn("[green]{task.completed}/{task.total}"),
+                "•",
+                TimeElapsedColumn(),
+                "•",
+                TimeRemainingColumn(),
+                console=self.console,
+                expand=True
+            ) as progress:
+                
+                # Overall progress
+                overall_task = progress.add_task("Overall Progress", total=total_combinations)
+                
+                all_results = {}
+                
+                for task_idx, task_name in enumerate(tasks_to_run):
+                    if task_name not in self.benchmark.tasks:
+                        continue
+                    
+                    # Task-specific progress
+                    task_progress = progress.add_task(f"Task: {task_name}", total=len(implementations_to_run))
+                    
+                    task_results = []
+                    
+                    for impl_idx, impl_name in enumerate(implementations_to_run):
+                        if impl_name not in self.benchmark.implementations:
+                            continue
+                        
+                        implementation = self.benchmark.implementations[impl_name]
+                        
+                        if not implementation.supports_task(task_name):
+                            if self.verbose:
+                                self.console.print(f"[yellow]Skipping {impl_name} for {task_name} (not supported)[/yellow]")
+                            progress.update(task_progress, advance=1)
+                            progress.update(overall_task, advance=1)
+                            continue
+                        
+                        # Implementation-specific progress
+                        impl_progress = progress.add_task(f"  {impl_name}", total=1)
+                        
+                        try:
+                            if self.verbose:
+                                self.console.print(f"[cyan]Running {task_name} with {impl_name}...[/cyan]")
+                            
+                            # Get task data
+                            task_data = self.benchmark.data.get(task_name, [])
+                            if not task_data:
+                                if self.verbose:
+                                    self.console.print(f"[yellow]No data available for {task_name}[/yellow]")
+                                progress.update(impl_progress, advance=1)
+                                progress.update(task_progress, advance=1)
+                                progress.update(overall_task, advance=1)
+                                continue
+                            
+                            # Limit data to max_samples
+                            task_data = task_data[:self.benchmark.max_samples]
+                            
+                            # Run the task
+                            task_obj = self.benchmark.tasks[task_name]
+                            results = task_obj.run_benchmark(implementation, task_data)
+                            task_results.extend(results)
+                            
+                            if self.verbose:
+                                self.console.print(f"[green]✓ Completed {task_name} with {impl_name}[/green]")
+                            
+                        except Exception as e:
+                            error_msg = f"Failed to run {task_name} with {impl_name}: {e}"
+                            if self.console:
+                                self.console.print(f"[red]✗ {error_msg}[/red]")
+                            else:
+                                print(f"✗ {error_msg}")
+                            
+                            if self.debug:
+                                import traceback
+                                traceback.print_exc()
+                        
+                        progress.update(impl_progress, advance=1)
+                        progress.update(task_progress, advance=1)
+                        progress.update(overall_task, advance=1)
+                    
+                    all_results[task_name] = task_results
+                    progress.remove_task(task_progress)
+                
+                return all_results
+        
+        else:
+            # Fallback to simple progress without rich
+            print(f"Running benchmark with {total_combinations} task-implementation combinations...")
+            
+            all_results = {}
+            completed = 0
+            
+            for task_name in tasks_to_run:
+                if task_name not in self.benchmark.tasks:
+                    continue
+                
+                print(f"\nRunning task: {task_name}")
+                task_results = []
+                
+                for impl_name in implementations_to_run:
+                    if impl_name not in self.benchmark.implementations:
+                        continue
+                    
+                    implementation = self.benchmark.implementations[impl_name]
+                    
+                    if not implementation.supports_task(task_name):
+                        print(f"  Skipping {impl_name} (not supported)")
+                        completed += 1
+                        continue
+                    
+                    try:
+                        print(f"  Running with {impl_name}...")
+                        
+                        # Get task data
+                        task_data = self.benchmark.data.get(task_name, [])
+                        if not task_data:
+                            print(f"  No data available for {task_name}")
+                            completed += 1
+                            continue
+                        
+                        # Limit data to max_samples
+                        task_data = task_data[:self.benchmark.max_samples]
+                        
+                        # Run the task
+                        task_obj = self.benchmark.tasks[task_name]
+                        results = task_obj.run_benchmark(implementation, task_data)
+                        task_results.extend(results)
+                        
+                        print(f"  ✓ Completed with {impl_name}")
+                        
+                    except Exception as e:
+                        print(f"  ✗ Failed with {impl_name}: {e}")
+                        if self.debug:
+                            import traceback
+                            traceback.print_exc()
+                    
+                    completed += 1
+                    print(f"  Progress: {completed}/{total_combinations} ({completed/total_combinations*100:.1f}%)")
+                
+                all_results[task_name] = task_results
+            
+            return all_results
+    
+    def save_results(self, results: Dict[str, Any]) -> str:
+        """Save benchmark results."""
+        if not results:
+            return ""
+        
+        try:
+            if self.verbose:
+                if self.console:
+                    self.console.print("\n[bold blue]Saving results...[/bold blue]")
+                else:
+                    print("Saving results...")
+            
+            output_path = self.benchmark.save_results(
+                results, 
+                comprehensive=True, 
+                individual=True,
+                output_dir=self.output_dir
+            )
+            
+            if self.verbose:
+                if self.console:
+                    self.console.print(f"[green]✓ Results saved to: {output_path}[/green]")
+                else:
+                    print(f"✓ Results saved to: {output_path}")
+            
+            return output_path
+            
+        except Exception as e:
+            error_msg = f"Failed to save results: {e}"
+            if self.console:
+                self.console.print(f"[red]✗ {error_msg}[/red]")
+            else:
+                print(f"✗ {error_msg}")
+            
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            
+            return ""
+    
+    def print_summary(self, results: Dict[str, Any]):
+        """Print a summary of the benchmark results."""
+        if not results:
+            return
+        
+        if self.console:
+            # Create summary table
+            summary_table = Table(title="Benchmark Summary", box=box.ROUNDED)
+            summary_table.add_column("Task", style="cyan")
+            summary_table.add_column("Implementations", style="green")
+            summary_table.add_column("Total Results", style="yellow")
+            summary_table.add_column("Successful", style="green")
+            summary_table.add_column("Failed", style="red")
+            
+            for task_name, task_results in results.items():
+                if not task_results:
+                    continue
+                
+                successful = sum(1 for r in task_results if r.success)
+                failed = len(task_results) - successful
+                implementations = len(set(r.implementation_name for r in task_results))
+                
+                summary_table.add_row(
+                    task_name,
+                    str(implementations),
+                    str(len(task_results)),
+                    str(successful),
+                    str(failed)
+                )
+            
+            self.console.print(summary_table)
+        else:
+            print("\nBenchmark Summary:")
+            print("-" * 50)
+            for task_name, task_results in results.items():
+                if not task_results:
+                    continue
+                
+                successful = sum(1 for r in task_results if r.success)
+                failed = len(task_results) - successful
+                implementations = len(set(r.implementation_name for r in task_results))
+                
+                print(f"{task_name}:")
+                print(f"  Implementations: {implementations}")
+                print(f"  Total Results: {len(task_results)}")
+                print(f"  Successful: {successful}")
+                print(f"  Failed: {failed}")
+    
+    def run(self) -> bool:
+        """Run the complete benchmark process."""
+        try:
+            # Print configuration
+            self.print_configuration()
+            
+            # Initialize benchmark
+            if not self.initialize_benchmark():
+                return False
+            
+            # Run benchmark with progress
+            if self.console:
+                self.console.print("\n[bold green]Starting benchmark execution...[/bold green]")
+            else:
+                print("\nStarting benchmark execution...")
+            
+            start_time = time.time()
+            results = self.run_full_benchmark_with_progress()
+            end_time = time.time()
+            
+            if not results:
+                if self.console:
+                    self.console.print("[red]No results generated[/red]")
+                else:
+                    print("No results generated")
+                return False
+            
+            # Save results
+            output_path = self.save_results(results)
+            
+            # Print summary
+            self.print_summary(results)
+            
+            # Print execution time
+            execution_time = end_time - start_time
+            if self.console:
+                self.console.print(f"\n[bold green]Benchmark completed in {execution_time:.2f} seconds[/bold green]")
+                if output_path:
+                    self.console.print(f"[bold blue]Results saved to: {output_path}[/bold blue]")
+            else:
+                print(f"\nBenchmark completed in {execution_time:.2f} seconds")
+                if output_path:
+                    print(f"Results saved to: {output_path}")
+            
+            return True
+            
+        except Exception as e:
+            error_msg = f"Benchmark execution failed: {e}"
+            if self.console:
+                self.console.print(f"[red]✗ {error_msg}[/red]")
+            else:
+                print(f"✗ {error_msg}")
+            
+            if self.debug:
+                import traceback
+                traceback.print_exc()
+            
+            return False
+
 
 def main():
-    parser = argparse.ArgumentParser(description='Run the Argument Mining Benchmark')
-    parser.add_argument(
-        '--max-samples', 
-        type=int, 
-        default=100,
-        help='Maximum number of samples to use for benchmarking (default: 100)'
+    """Main function with comprehensive argument parsing."""
+    parser = argparse.ArgumentParser(
+        description='Enhanced Argument Mining Benchmark Runner',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python run.py                                    # Run with default settings (OpenAI disabled)
+  python run.py --max-samples 50                   # Limit to 50 samples
+  python run.py --enable-openai                    # Enable OpenAI implementations
+  python run.py --task-filter adu_extraction       # Run only ADU extraction
+  python run.py --impl-filter tinyllama modernbert # Run only specific implementations
+  python run.py --verbose --debug                  # Enable verbose and debug output
+  python run.py --no-save-csv                      # Skip CSV output
+        """
     )
-    parser.add_argument(
-        '--quick', 
-        action='store_true',
-        help='Run with fewer samples for quick testing (equivalent to --max-samples 10)'
-    )
-    parser.add_argument(
-        '--task',
-        type=str,
-        choices=['adu_extraction', 'stance_classification', 'claim_premise_linking'],
-        help='Run benchmark for a specific task only'
-    )
-    parser.add_argument(
-        '--implementation',
-        type=str,
-        choices=['openai', 'tinyllama', 'modernbert', 'deberta'],
-        help='Run benchmark for a specific implementation only'
-    )
-    parser.add_argument(
-        '--list-tasks',
-        action='store_true',
-        help='List available tasks and exit'
-    )
-    parser.add_argument(
-        '--list-implementations',
-        action='store_true',
-        help='List available implementations and exit'
-    )
+    
+    # Core benchmark settings
+    parser.add_argument('--max-samples', type=int, default=DEFAULT_MAX_SAMPLES,
+                       help=f'Maximum number of samples to use for benchmarking (default: {DEFAULT_MAX_SAMPLES})')
+    parser.add_argument('--disable-openai', action='store_true', default=DEFAULT_DISABLE_OPENAI,
+                       help=f'Disable OpenAI implementations (default: {DEFAULT_DISABLE_OPENAI})')
+    parser.add_argument('--disable-tinyllama', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA,
+                       help=f'Disable TinyLlama implementations (default: {not DEFAULT_ENABLE_TINYLLAMA})')
+    parser.add_argument('--disable-modernbert', action='store_true', default=not DEFAULT_ENABLE_MODERNBERT,
+                       help=f'Disable ModernBERT implementations (default: {not DEFAULT_ENABLE_MODERNBERT})')
+    parser.add_argument('--disable-deberta', action='store_true', default=not DEFAULT_ENABLE_DEBERTA,
+                       help=f'Disable DeBERTa implementations (default: {not DEFAULT_ENABLE_DEBERTA})')
+    parser.add_argument('--enable-openai', action='store_true',
+                       help='Enable OpenAI implementations (overrides --disable-openai)')
+    parser.add_argument('--no-save-csv', action='store_true',
+                       help='Disable CSV output (results still saved to JSON)')
+    
+    # Output and debugging
+    parser.add_argument('--verbose', '-v', action='store_true', default=DEFAULT_VERBOSE,
+                       help=f'Enable verbose output (default: {DEFAULT_VERBOSE})')
+    parser.add_argument('--debug', '-d', action='store_true', default=DEFAULT_DEBUG,
+                       help=f'Enable debug mode with detailed error information (default: {DEFAULT_DEBUG})')
+    parser.add_argument('--output-dir', type=str, default=DEFAULT_OUTPUT_DIR,
+                       help=f'Output directory for results (default: {DEFAULT_OUTPUT_DIR})')
+    
+    # Filtering options
+    parser.add_argument('--task-filter', nargs='+', 
+                       choices=['adu_extraction', 'stance_classification', 'claim_premise_linking'],
+                       help='Run only specific tasks')
+    parser.add_argument('--impl-filter', nargs='+',
+                       choices=['openai', 'tinyllama', 'modernbert', 'deberta'],
+                       help='Run only specific implementations')
+    
+    # Quick presets
+    parser.add_argument('--quick', action='store_true',
+                       help='Quick test run (10 samples, no OpenAI)')
+    parser.add_argument('--full', action='store_true',
+                       help='Full benchmark run (all samples, all implementations)')
     
     args = parser.parse_args()
     
-    # If quick mode is enabled, override max_samples
+    # Handle OpenAI enable/disable logic
+    if args.enable_openai:
+        args.disable_openai = False
+    
+    # Apply presets
     if args.quick:
-        max_samples = 10
-        print("Running in quick mode with 10 samples")
+        args.max_samples = DEFAULT_QUICK_MAX_SAMPLES
+        args.disable_openai = True
+        args.verbose = True
+        print(f"Quick test mode enabled: {DEFAULT_QUICK_MAX_SAMPLES} samples, no OpenAI, verbose output")
+    
+    if args.full:
+        args.max_samples = DEFAULT_FULL_MAX_SAMPLES
+        args.disable_openai = False
+        print(f"Full benchmark mode enabled: {DEFAULT_FULL_MAX_SAMPLES} samples, all implementations")
+    
+    # Use default filters if none specified
+    task_filter = args.task_filter if args.task_filter else get_default_task_filter()
+    implementation_filter = args.impl_filter if args.impl_filter else get_default_implementation_filter()
+    
+    # Create and run benchmark
+    runner = BenchmarkRunner(
+        max_samples=args.max_samples,
+        disable_openai=args.disable_openai,
+        disable_tinyllama=args.disable_tinyllama,
+        disable_modernbert=args.disable_modernbert,
+        disable_deberta=args.disable_deberta,
+        save_csv=not args.no_save_csv,
+        verbose=args.verbose,
+        debug=args.debug,
+        task_filter=task_filter,
+        implementation_filter=implementation_filter,
+        output_dir=args.output_dir
+    )
+    
+    success = runner.run()
+    
+    if success:
+        print("\n✓ Benchmark completed successfully!")
+        sys.exit(0)
     else:
-        max_samples = args.max_samples
-        print(f"Running benchmark with {max_samples} samples")
-    
-    # Handle list options
-    if args.list_tasks:
-        print("Available tasks:")
-        print("  - adu_extraction: Extract Argumentative Discourse Units (claims and premises)")
-        print("  - stance_classification: Classify stance as pro/con/neutral")
-        print("  - claim_premise_linking: Link claims to supporting/contradicting premises")
-        return
-    
-    if args.list_implementations:
-        print("Available implementations:")
-        print("  - openai: OpenAI LLM Classifier")
-        print("  - tinyllama: TinyLlama LLM Classifier")
-        print("  - modernbert: ModernBERT (PeftEncoderModelLoader)")
-        print("  - deberta: DeBERTa (NonTrainedEncoderModelLoader)")
-        return
-    
-    # Determine what to run
-    if args.task and args.implementation:
-        # Run specific task with specific implementation
-        print(f"Running task '{args.task}' with implementation '{args.implementation}'")
-        results = run_single_task_benchmark(args.task, max_samples, args.implementation)
-    elif args.task:
-        # Run specific task with all implementations
-        print(f"Running task '{args.task}' with all implementations")
-        results = run_single_task_benchmark(args.task, max_samples)
-    elif args.implementation:
-        # Run specific implementation on all tasks
-        print(f"Running implementation '{args.implementation}' on all tasks")
-        results = run_single_implementation_benchmark(args.implementation, max_samples)
-    else:
-        # Run full benchmark
-        print("Running full benchmark with all tasks and implementations")
-        results = run_full_benchmark(max_samples)
-    
-    if results:
-        print("Benchmark completed successfully!")
-    else:
-        print("Benchmark failed or returned no results.")
+        print("\n✗ Benchmark failed!")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

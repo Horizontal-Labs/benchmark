@@ -90,9 +90,18 @@ def append_to_implementations_json(results: Dict[str, List[BenchmarkResult]], ou
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     implementations_file = metrics_dir / "implementations.json"
@@ -179,9 +188,18 @@ def append_to_tasks_json(results: Dict[str, List[BenchmarkResult]], output_dir: 
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     tasks_file = metrics_dir / "tasks.json"
@@ -336,9 +354,18 @@ def append_to_system_json(results: Dict[str, List[BenchmarkResult]], output_dir:
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     system_file = metrics_dir / "system.json"
@@ -565,21 +592,31 @@ def save_comprehensive_results_csv(results: Dict[str, List[BenchmarkResult]], ou
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
+        
     """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Save individual results to CSV
-    save_results_to_csv(results, output_dir)
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+        main_results_dir = output_path.parent
+    else:
+        # We received the main results directory
+        main_results_dir = output_path
+        metrics_dir = output_path / "metrics"
     
-    # Append aggregated metrics to existing CSV files
-    # Use the existing metrics directory structure
-    append_to_tasks_csv(results, output_dir)
-    append_to_implementations_csv(results, output_dir)
-    append_to_system_csv(results, output_dir)
+    # Save individual results to CSV in the main results directory
+    save_results_to_csv(results, str(main_results_dir))
     
-    print(f"Saved comprehensive results to CSV in {output_path}")
+    # Append aggregated metrics to existing CSV files in the metrics directory
+    append_to_tasks_csv(results, str(metrics_dir))
+    append_to_implementations_csv(results, str(metrics_dir))
+    append_to_system_csv(results, str(metrics_dir))
+    
+    print(f"Saved comprehensive results to CSV in {main_results_dir}")
 
 
 def save_results_to_csv(results: Dict[str, List[BenchmarkResult]], output_dir: str = "results") -> None:
@@ -914,9 +951,18 @@ def append_to_implementations_csv(results: Dict[str, List[BenchmarkResult]], out
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     implementations_file = metrics_dir / "implementations.csv"
@@ -996,9 +1042,18 @@ def append_to_tasks_csv(results: Dict[str, List[BenchmarkResult]], output_dir: s
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     tasks_file = metrics_dir / "tasks.csv"
@@ -1084,9 +1139,18 @@ def append_to_system_csv(results: Dict[str, List[BenchmarkResult]], output_dir: 
     
     Args:
         results: Dictionary mapping task names to lists of BenchmarkResult objects
-        output_dir: Directory to save results to
+        output_dir: Directory to save results to (can be main results dir or metrics dir)
     """
-    metrics_dir = Path(output_dir) / "metrics"
+    output_path = Path(output_dir)
+    
+    # Determine if we received the metrics directory or main results directory
+    if output_path.name == "metrics":
+        # We received the metrics directory directly
+        metrics_dir = output_path
+    else:
+        # We received the main results directory
+        metrics_dir = output_path / "metrics"
+    
     metrics_dir.mkdir(parents=True, exist_ok=True)
     
     system_file = metrics_dir / "system.csv"
