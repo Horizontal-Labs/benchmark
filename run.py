@@ -32,10 +32,9 @@ DEFAULT_DEBUG = False
 DEFAULT_OUTPUT_DIR = 'results'
 
 # Task enable/disable flags (True = enabled by default, False = disabled by default)
-DEFAULT_ENABLE_ADU_EXTRACTION = False
+DEFAULT_ENABLE_ADU_EXTRACTION = True
 DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
 DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
-
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
 DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
@@ -563,11 +562,22 @@ class BenchmarkRunner:
                     if not impl_result_list:
                         continue
                     
-                    # Create confusion matrix table
+                    # Create confusion matrix table with task-specific labels
                     cm_table = Table(title=f"{impl_name} - Confusion Matrix", box=box.ROUNDED)
+                    
+                    # Get task-specific labels
+                    if task_name == 'stance_classification':
+                        label_0, label_1 = "Refute", "Support"
+                    elif task_name == 'adu_extraction':
+                        label_0, label_1 = "Not ADU", "ADU"
+                    elif task_name == 'claim_premise_linking':
+                        label_0, label_1 = "No Link", "Linked"
+                    else:
+                        label_0, label_1 = "Class 0", "Class 1"
+                    
                     cm_table.add_column("", style="cyan", width=8)
-                    cm_table.add_column("Predicted: 0", style="yellow", justify="right")
-                    cm_table.add_column("Predicted: 1", style="yellow", justify="right")
+                    cm_table.add_column(f"Predicted: {label_0}", style="yellow", justify="right")
+                    cm_table.add_column(f"Predicted: {label_1}", style="yellow", justify="right")
                     
                     # Calculate confusion matrix values
                     tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
@@ -575,10 +585,13 @@ class BenchmarkRunner:
                     fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
                     tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
-                    cm_table.add_row("Actual: 0", str(tn), str(fp))
-                    cm_table.add_row("Actual: 1", str(fn), str(tp))
+                    cm_table.add_row(f"Actual: {label_0}", str(tn), str(fp))
+                    cm_table.add_row(f"Actual: {label_1}", str(fn), str(tp))
                     
                     self.console.print(cm_table)
+            
+            # Print aggregated confusion matrix across all tasks
+            self.print_aggregated_confusion_matrix(results)
         else:
             # Fallback for when Rich is not available
             print("\nDetailed Benchmark Results:")
@@ -623,9 +636,161 @@ class BenchmarkRunner:
                     fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
                     tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
+                    # Get task-specific labels
+                    if task_name == 'stance_classification':
+                        label_0, label_1 = "Refute", "Support"
+                    elif task_name == 'adu_extraction':
+                        label_0, label_1 = "Not ADU", "ADU"
+                    elif task_name == 'claim_premise_linking':
+                        label_0, label_1 = "No Link", "Linked"
+                    else:
+                        label_0, label_1 = "Class 0", "Class 1"
+                    
                     print(f"  Confusion Matrix:")
-                    print(f"    Actual: 0 -> Predicted: 0 = {tn}, Predicted: 1 = {fp}")
-                    print(f"    Actual: 1 -> Predicted: 0 = {fn}, Predicted: 1 = {tp}")
+                    print(f"    Actual: {label_0} -> Predicted: {label_0} = {tn}, Predicted: {label_1} = {fp}")
+                    print(f"    Actual: {label_1} -> Predicted: {label_0} = {fn}, Predicted: {label_1} = {tp}")
+            
+            # Print aggregated confusion matrix across all tasks
+            self.print_aggregated_confusion_matrix_fallback(results)
+
+    def print_aggregated_confusion_matrix(self, results: Dict[str, Any]):
+        """Print aggregated confusion matrix across all tasks and implementations."""
+        if not results:
+            return
+        
+        # Collect all results by implementation
+        impl_results = {}
+        for task_name, task_results in results.items():
+            for result in task_results:
+                if result.success:
+                    if result.implementation_name not in impl_results:
+                        impl_results[result.implementation_name] = []
+                    impl_results[result.implementation_name].append(result)
+        
+        if not impl_results:
+            return
+        
+        # Create aggregated confusion matrix table
+        agg_table = Table(title="Aggregated Confusion Matrix Across All Tasks", box=box.ROUNDED)
+        agg_table.add_column("Implementation", style="cyan", width=15)
+        agg_table.add_column("Predicted: Negative", style="yellow", justify="right")
+        agg_table.add_column("Predicted: Positive", style="yellow", justify="right")
+        agg_table.add_column("Total Samples", style="blue", justify="right")
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            total_samples = len(impl_result_list)
+            
+            # Add row to aggregated table
+            agg_table.add_row(
+                impl_name,
+                str(total_tn + total_fn),  # Predicted: Negative (TN + FN)
+                str(total_tp + total_fp),  # Predicted: Positive (TP + FP)
+                str(total_samples)
+            )
+        
+        self.console.print(agg_table)
+        
+        # Create detailed aggregated confusion matrix
+        detailed_table = Table(title="Detailed Aggregated Confusion Matrix", box=box.ROUNDED)
+        detailed_table.add_column("Implementation", style="cyan", width=15)
+        detailed_table.add_column("", style="cyan", width=8)
+        detailed_table.add_column("Predicted: Negative", style="yellow", justify="right")
+        detailed_table.add_column("Predicted: Positive", style="yellow", justify="right")
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            
+            # Add rows for this implementation
+            detailed_table.add_row(
+                impl_name,
+                "Actual: Negative",
+                str(total_tn),
+                str(total_fp)
+            )
+            detailed_table.add_row(
+                "",
+                "Actual: Positive",
+                str(total_fn),
+                str(total_tp)
+            )
+        
+        self.console.print(detailed_table)
+
+    def print_aggregated_confusion_matrix_fallback(self, results: Dict[str, Any]):
+        """Print aggregated confusion matrix fallback for when Rich is not available."""
+        if not results:
+            return
+        
+        # Collect all results by implementation
+        impl_results = {}
+        for task_name, task_results in results.items():
+            for result in task_results:
+                if result.success:
+                    if result.implementation_name not in impl_results:
+                        impl_results[result.implementation_name] = []
+                    impl_results[result.implementation_name].append(result)
+        
+        if not impl_results:
+            return
+        
+        print("\nAggregated Confusion Matrix Across All Tasks:")
+        print("=" * 60)
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            total_samples = len(impl_result_list)
+            
+            print(f"\n{impl_name}:")
+            print(f"  Total Samples: {total_samples}")
+            print(f"  Confusion Matrix:")
+            print(f"    Actual: Negative -> Predicted: Negative = {total_tn}, Predicted: Positive = {total_fp}")
+            print(f"    Actual: Positive -> Predicted: Negative = {total_fn}, Predicted: Positive = {total_tp}")
+            
+            # Calculate aggregated metrics
+            if total_tp + total_fp > 0:
+                precision = total_tp / (total_tp + total_fp)
+            else:
+                precision = 0.0
+                
+            if total_tp + total_fn > 0:
+                recall = total_tp / (total_tp + total_fn)
+            else:
+                recall = 0.0
+                
+            if precision + recall > 0:
+                f1 = 2 * (precision * recall) / (precision + recall)
+            else:
+                f1 = 0.0
+                
+            accuracy = (total_tp + total_tn) / total_samples if total_samples > 0 else 0.0
+            
+            print(f"  Aggregated Metrics:")
+            print(f"    Accuracy:  {accuracy:.3f}")
+            print(f"    Precision: {precision:.3f}")
+            print(f"    Recall:    {recall:.3f}")
+            print(f"    F1-Score:  {f1:.3f}")
 
     def print_summary(self, results: Dict[str, Any]):
         """Print a summary of the benchmark results."""

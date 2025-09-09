@@ -129,22 +129,48 @@ class MetricsCalculator:
         accuracy = 1.0 if pred_stance == gt_stance else 0.0
         
         # For stance classification, we'll treat it as a binary classification problem
-        # where we count correct predictions as true positives
-        if pred_stance == gt_stance:
+        # where we map stances to binary values: 'con'/'refute' = 0, 'pro'/'support' = 1
+        # Convert stances to binary values
+        pred_binary = 1 if pred_stance in ['pro', 'support'] else 0
+        gt_binary = 1 if gt_stance in ['pro', 'support'] else 0
+        
+        # Calculate confusion matrix values
+        if pred_binary == 1 and gt_binary == 1:
             tp = 1
             tn = 0
             fp = 0
             fn = 0
-        else:
+        elif pred_binary == 0 and gt_binary == 0:
+            tp = 0
+            tn = 1
+            fp = 0
+            fn = 0
+        elif pred_binary == 1 and gt_binary == 0:
             tp = 0
             tn = 0
             fp = 1
             fn = 0
+        else:  # pred_binary == 0 and gt_binary == 1
+            tp = 0
+            tn = 0
+            fp = 0
+            fn = 1
         
-        # Set other metrics to accuracy for now
-        precision = accuracy
-        recall = accuracy
-        f1 = accuracy
+        # Calculate proper precision, recall, and F1 based on confusion matrix
+        if tp + fp == 0:
+            precision = 0.0
+        else:
+            precision = tp / (tp + fp)
+            
+        if tp + fn == 0:
+            recall = 0.0
+        else:
+            recall = tp / (tp + fn)
+            
+        if precision + recall == 0:
+            f1 = 0.0
+        else:
+            f1 = 2 * (precision * recall) / (precision + recall)
         
         return {
             'accuracy': float(accuracy),
