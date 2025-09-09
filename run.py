@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 
 # Core benchmark settings
 DEFAULT_MAX_SAMPLES = 100
-DEFAULT_DISABLE_OPENAI = False
+DEFAULT_DISABLE_OPENAI = True
 DEFAULT_SAVE_CSV = True
 
 # Output and debugging
@@ -32,7 +32,7 @@ DEFAULT_DEBUG = False
 DEFAULT_OUTPUT_DIR = 'results'
 
 # Task enable/disable flags (True = enabled by default, False = disabled by default)
-DEFAULT_ENABLE_ADU_EXTRACTION = True
+DEFAULT_ENABLE_ADU_EXTRACTION = False
 DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
 DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
 
@@ -41,6 +41,11 @@ DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
 DEFAULT_ENABLE_MODERNBERT = True
 DEFAULT_ENABLE_DEBERTA = True
+DEFAULT_ENABLE_GPT41 = True
+DEFAULT_ENABLE_GPT5 = True
+DEFAULT_ENABLE_GPT5_MINI = True
+DEFAULT_ENABLE_LLAMA3_3B = True
+DEFAULT_ENABLE_QWEN2_5B = True
 
 # Quick presets
 DEFAULT_QUICK_MAX_SAMPLES = 10
@@ -93,6 +98,16 @@ def get_default_implementation_filter() -> Optional[List[str]]:
         implementations.append('modernbert')
     if DEFAULT_ENABLE_DEBERTA:
         implementations.append('deberta')
+    if DEFAULT_ENABLE_GPT41:
+        implementations.append('gpt-4.1')
+    if DEFAULT_ENABLE_GPT5:
+        implementations.append('gpt-5')
+    if DEFAULT_ENABLE_GPT5_MINI:
+        implementations.append('gpt-5-mini')
+    if DEFAULT_ENABLE_LLAMA3_3B:
+        implementations.append('llama3-3b')
+    if DEFAULT_ENABLE_QWEN2_5B:
+        implementations.append('qwen2.5-1.5b')
     return implementations if implementations else None
 
 
@@ -105,6 +120,11 @@ class BenchmarkRunner:
                  disable_tinyllama: bool = False,
                  disable_modernbert: bool = False,
                  disable_deberta: bool = False,
+                 disable_gpt41: bool = False,
+                 disable_gpt5: bool = False,
+                 disable_gpt5_mini: bool = False,
+                 disable_llama3_3b: bool = False,
+                 disable_qwen2_5b: bool = False,
                  save_csv: bool = True,
                  verbose: bool = False,
                  debug: bool = False,
@@ -120,6 +140,8 @@ class BenchmarkRunner:
             disable_tinyllama: If True, skip TinyLlama implementation
             disable_modernbert: If True, skip ModernBERT implementation
             disable_deberta: If True, skip DeBERTa implementation
+            disable_llama3_3b: If True, skip Llama 3.2 3B implementation
+            disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation
             save_csv: Whether to save results to CSV files
             verbose: Enable verbose output
             debug: Enable debug mode with detailed logging
@@ -132,6 +154,11 @@ class BenchmarkRunner:
         self.disable_tinyllama = disable_tinyllama
         self.disable_modernbert = disable_modernbert
         self.disable_deberta = disable_deberta
+        self.disable_gpt41 = disable_gpt41
+        self.disable_gpt5 = disable_gpt5
+        self.disable_gpt5_mini = disable_gpt5_mini
+        self.disable_llama3_3b = disable_llama3_3b
+        self.disable_qwen2_5b = disable_qwen2_5b
         self.save_csv = save_csv
         self.verbose = verbose
         self.debug = debug
@@ -165,6 +192,8 @@ class BenchmarkRunner:
             config_table.add_row("TinyLlama Disabled", str(self.disable_tinyllama))
             config_table.add_row("ModernBERT Disabled", str(self.disable_modernbert))
             config_table.add_row("DeBERTa Disabled", str(self.disable_deberta))
+            config_table.add_row("Llama 3.2 3B Disabled", str(self.disable_llama3_3b))
+            config_table.add_row("Qwen 2.5 1.5B Disabled", str(self.disable_qwen2_5b))
             config_table.add_row("Save CSV", str(self.save_csv))
             config_table.add_row("Verbose", str(self.verbose))
             config_table.add_row("Debug", str(self.debug))
@@ -180,6 +209,8 @@ class BenchmarkRunner:
             print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
             print(f"  ModernBERT Disabled: {self.disable_modernbert}")
             print(f"  DeBERTa Disabled: {self.disable_deberta}")
+            print(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
+            print(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
             print(f"  Save CSV: {self.save_csv}")
             print(f"  Verbose: {self.verbose}")
             print(f"  Debug: {self.debug}")
@@ -201,7 +232,9 @@ class BenchmarkRunner:
                 disable_openai=self.disable_openai,
                 disable_tinyllama=self.disable_tinyllama,
                 disable_modernbert=self.disable_modernbert,
-                disable_deberta=self.disable_deberta
+                disable_deberta=self.disable_deberta,
+                disable_llama3_3b=self.disable_llama3_3b,
+                disable_qwen2_5b=self.disable_qwen2_5b
             )
             
             if self.verbose:
@@ -239,6 +272,26 @@ class BenchmarkRunner:
         
         # Determine which implementations to run
         implementations_to_run = self.implementation_filter if self.implementation_filter else list(self.benchmark.implementations.keys())
+        
+        # Filter out disabled implementations
+        if self.disable_openai:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'openai']
+        if self.disable_tinyllama:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama']
+        if self.disable_modernbert:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'modernbert']
+        if self.disable_deberta:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'deberta']
+        if self.disable_gpt41:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-4.1']
+        if self.disable_gpt5:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-5']
+        if self.disable_gpt5_mini:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-5-mini']
+        if self.disable_llama3_3b:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'llama3-3b']
+        if self.disable_qwen2_5b:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'qwen2.5-1.5b']
         
         # Calculate total work
         total_combinations = len(tasks_to_run) * len(implementations_to_run)
@@ -713,6 +766,16 @@ Examples:
                        help=f'Disable ModernBERT implementations (default: {not DEFAULT_ENABLE_MODERNBERT})')
     parser.add_argument('--disable-deberta', action='store_true', default=not DEFAULT_ENABLE_DEBERTA,
                        help=f'Disable DeBERTa implementations (default: {not DEFAULT_ENABLE_DEBERTA})')
+    parser.add_argument('--disable-gpt41', action='store_true', default=not DEFAULT_ENABLE_GPT41,
+                       help=f'Disable GPT-4.1 implementations (default: {not DEFAULT_ENABLE_GPT41})')
+    parser.add_argument('--disable-gpt5', action='store_true', default=not DEFAULT_ENABLE_GPT5,
+                       help=f'Disable GPT-5 implementations (default: {not DEFAULT_ENABLE_GPT5})')
+    parser.add_argument('--disable-gpt5-mini', action='store_true', default=not DEFAULT_ENABLE_GPT5_MINI,
+                       help=f'Disable GPT-5 Mini implementations (default: {not DEFAULT_ENABLE_GPT5_MINI})')
+    parser.add_argument('--disable-llama3-3b', action='store_true', default=not DEFAULT_ENABLE_LLAMA3_3B,
+                       help=f'Disable Llama 3.2 3B implementations (default: {not DEFAULT_ENABLE_LLAMA3_3B})')
+    parser.add_argument('--disable-qwen2-5b', action='store_true', default=not DEFAULT_ENABLE_QWEN2_5B,
+                       help=f'Disable Qwen 2.5 1.5B implementations (default: {not DEFAULT_ENABLE_QWEN2_5B})')
     parser.add_argument('--enable-openai', action='store_true',
                        help='Enable OpenAI implementations (overrides --disable-openai)')
     parser.add_argument('--no-save-csv', action='store_true',
@@ -769,6 +832,11 @@ Examples:
         disable_tinyllama=args.disable_tinyllama,
         disable_modernbert=args.disable_modernbert,
         disable_deberta=args.disable_deberta,
+        disable_gpt41=args.disable_gpt41,
+        disable_gpt5=args.disable_gpt5,
+        disable_gpt5_mini=args.disable_gpt5_mini,
+        disable_llama3_3b=args.disable_llama3_3b,
+        disable_qwen2_5b=args.disable_qwen2_5b,
         save_csv=not args.no_save_csv,
         verbose=args.verbose,
         debug=args.debug,

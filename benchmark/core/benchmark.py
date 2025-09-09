@@ -48,7 +48,9 @@ from ..implementations import (
     OpenAIImplementation,
     TinyLlamaImplementation,
     ModernBERTImplementation,
-    DeBERTaImplementation
+    DeBERTaImplementation,
+    Llama33BImplementation,
+    Qwen25BImplementation
 )
 from ..tasks import (
     ADUExtractionTask,
@@ -70,7 +72,8 @@ class ArgumentMiningBenchmark:
 
     def __init__(self, max_samples: int = 100, disable_openai: bool = False, 
                  disable_tinyllama: bool = False, disable_modernbert: bool = False, 
-                 disable_deberta: bool = False):
+                 disable_deberta: bool = False, disable_llama3_3b: bool = False,
+                 disable_qwen2_5b: bool = False):
         """
         Initialize the benchmark.
         
@@ -80,6 +83,8 @@ class ArgumentMiningBenchmark:
             disable_tinyllama: If True, skip TinyLlama implementation initialization (default: False)
             disable_modernbert: If True, skip ModernBERT implementation initialization (default: False)
             disable_deberta: If True, skip DeBERTa implementation initialization (default: False)
+            disable_llama3_3b: If True, skip Llama 3.2 3B implementation initialization (default: False)
+            disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation initialization (default: False)
         """
         self.data = {}
         self.results = []
@@ -90,6 +95,8 @@ class ArgumentMiningBenchmark:
         self.disable_tinyllama = disable_tinyllama
         self.disable_modernbert = disable_modernbert
         self.disable_deberta = disable_deberta
+        self.disable_llama3_3b = disable_llama3_3b
+        self.disable_qwen2_5b = disable_qwen2_5b
         self.execution_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         # Check environment variables
@@ -114,6 +121,10 @@ class ArgumentMiningBenchmark:
             disabled_implementations.append("ModernBERT")
         if self.disable_deberta:
             disabled_implementations.append("DeBERTa")
+        if self.disable_llama3_3b:
+            disabled_implementations.append("Llama3-3B")
+        if self.disable_qwen2_5b:
+            disabled_implementations.append("Qwen2.5-1.5B")
         
         if disabled_implementations:
             logger.info(f"Disabled implementations: {', '.join(disabled_implementations)}")
@@ -187,6 +198,34 @@ class ArgumentMiningBenchmark:
                 log_initialization(logger, "DeBERTa implementation", "failed", str(e))
         else:
             log_initialization(logger, "DeBERTa implementation", "disabled")
+        
+        # Llama 3.2 3B implementation
+        if not self.disable_llama3_3b:
+            try:
+                llama3_3b_impl = Llama33BImplementation()
+                if llama3_3b_impl.initialize():
+                    implementations['llama3-3b'] = llama3_3b_impl
+                    log_initialization(logger, "Llama 3.2 3B implementation", "success")
+                else:
+                    log_initialization(logger, "Llama 3.2 3B implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "Llama 3.2 3B implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "Llama 3.2 3B implementation", "disabled")
+        
+        # Qwen 2.5 1.5B implementation
+        if not self.disable_qwen2_5b:
+            try:
+                qwen2_5b_impl = Qwen25BImplementation()
+                if qwen2_5b_impl.initialize():
+                    implementations['qwen2.5-1.5b'] = qwen2_5b_impl
+                    log_initialization(logger, "Qwen 2.5 1.5B implementation", "success")
+                else:
+                    log_initialization(logger, "Qwen 2.5 1.5B implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "Qwen 2.5 1.5B implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "Qwen 2.5 1.5B implementation", "disabled")
         
         self.implementations = implementations
     
