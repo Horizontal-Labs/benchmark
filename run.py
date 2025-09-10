@@ -23,7 +23,7 @@ warnings.filterwarnings('ignore')
 
 # Core benchmark settings
 DEFAULT_MAX_SAMPLES = 100
-DEFAULT_DISABLE_OPENAI = False
+DEFAULT_DISABLE_OPENAI = True
 DEFAULT_SAVE_CSV = True
 
 # Output and debugging
@@ -35,12 +35,16 @@ DEFAULT_OUTPUT_DIR = 'results'
 DEFAULT_ENABLE_ADU_EXTRACTION = True
 DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
 DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
-
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
 DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
 DEFAULT_ENABLE_MODERNBERT = True
 DEFAULT_ENABLE_DEBERTA = True
+DEFAULT_ENABLE_GPT41 = True
+DEFAULT_ENABLE_GPT5 = True
+DEFAULT_ENABLE_GPT5_MINI = True
+DEFAULT_ENABLE_LLAMA3_3B = True
+DEFAULT_ENABLE_QWEN2_5B = True
 
 # Quick presets
 DEFAULT_QUICK_MAX_SAMPLES = 10
@@ -93,6 +97,16 @@ def get_default_implementation_filter() -> Optional[List[str]]:
         implementations.append('modernbert')
     if DEFAULT_ENABLE_DEBERTA:
         implementations.append('deberta')
+    if DEFAULT_ENABLE_GPT41:
+        implementations.append('gpt-4.1')
+    if DEFAULT_ENABLE_GPT5:
+        implementations.append('gpt-5')
+    if DEFAULT_ENABLE_GPT5_MINI:
+        implementations.append('gpt-5-mini')
+    if DEFAULT_ENABLE_LLAMA3_3B:
+        implementations.append('llama3-3b')
+    if DEFAULT_ENABLE_QWEN2_5B:
+        implementations.append('qwen2.5-1.5b')
     return implementations if implementations else None
 
 
@@ -105,6 +119,11 @@ class BenchmarkRunner:
                  disable_tinyllama: bool = False,
                  disable_modernbert: bool = False,
                  disable_deberta: bool = False,
+                 disable_gpt41: bool = False,
+                 disable_gpt5: bool = False,
+                 disable_gpt5_mini: bool = False,
+                 disable_llama3_3b: bool = False,
+                 disable_qwen2_5b: bool = False,
                  save_csv: bool = True,
                  verbose: bool = False,
                  debug: bool = False,
@@ -120,6 +139,8 @@ class BenchmarkRunner:
             disable_tinyllama: If True, skip TinyLlama implementation
             disable_modernbert: If True, skip ModernBERT implementation
             disable_deberta: If True, skip DeBERTa implementation
+            disable_llama3_3b: If True, skip Llama 3.2 3B implementation
+            disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation
             save_csv: Whether to save results to CSV files
             verbose: Enable verbose output
             debug: Enable debug mode with detailed logging
@@ -132,6 +153,11 @@ class BenchmarkRunner:
         self.disable_tinyllama = disable_tinyllama
         self.disable_modernbert = disable_modernbert
         self.disable_deberta = disable_deberta
+        self.disable_gpt41 = disable_gpt41
+        self.disable_gpt5 = disable_gpt5
+        self.disable_gpt5_mini = disable_gpt5_mini
+        self.disable_llama3_3b = disable_llama3_3b
+        self.disable_qwen2_5b = disable_qwen2_5b
         self.save_csv = save_csv
         self.verbose = verbose
         self.debug = debug
@@ -165,6 +191,8 @@ class BenchmarkRunner:
             config_table.add_row("TinyLlama Disabled", str(self.disable_tinyllama))
             config_table.add_row("ModernBERT Disabled", str(self.disable_modernbert))
             config_table.add_row("DeBERTa Disabled", str(self.disable_deberta))
+            config_table.add_row("Llama 3.2 3B Disabled", str(self.disable_llama3_3b))
+            config_table.add_row("Qwen 2.5 1.5B Disabled", str(self.disable_qwen2_5b))
             config_table.add_row("Save CSV", str(self.save_csv))
             config_table.add_row("Verbose", str(self.verbose))
             config_table.add_row("Debug", str(self.debug))
@@ -180,6 +208,8 @@ class BenchmarkRunner:
             print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
             print(f"  ModernBERT Disabled: {self.disable_modernbert}")
             print(f"  DeBERTa Disabled: {self.disable_deberta}")
+            print(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
+            print(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
             print(f"  Save CSV: {self.save_csv}")
             print(f"  Verbose: {self.verbose}")
             print(f"  Debug: {self.debug}")
@@ -201,7 +231,9 @@ class BenchmarkRunner:
                 disable_openai=self.disable_openai,
                 disable_tinyllama=self.disable_tinyllama,
                 disable_modernbert=self.disable_modernbert,
-                disable_deberta=self.disable_deberta
+                disable_deberta=self.disable_deberta,
+                disable_llama3_3b=self.disable_llama3_3b,
+                disable_qwen2_5b=self.disable_qwen2_5b
             )
             
             if self.verbose:
@@ -239,6 +271,26 @@ class BenchmarkRunner:
         
         # Determine which implementations to run
         implementations_to_run = self.implementation_filter if self.implementation_filter else list(self.benchmark.implementations.keys())
+        
+        # Filter out disabled implementations
+        if self.disable_openai:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'openai']
+        if self.disable_tinyllama:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama']
+        if self.disable_modernbert:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'modernbert']
+        if self.disable_deberta:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'deberta']
+        if self.disable_gpt41:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-4.1']
+        if self.disable_gpt5:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-5']
+        if self.disable_gpt5_mini:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'gpt-5-mini']
+        if self.disable_llama3_3b:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'llama3-3b']
+        if self.disable_qwen2_5b:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'qwen2.5-1.5b']
         
         # Calculate total work
         total_combinations = len(tasks_to_run) * len(implementations_to_run)
@@ -510,11 +562,22 @@ class BenchmarkRunner:
                     if not impl_result_list:
                         continue
                     
-                    # Create confusion matrix table
+                    # Create confusion matrix table with task-specific labels
                     cm_table = Table(title=f"{impl_name} - Confusion Matrix", box=box.ROUNDED)
+                    
+                    # Get task-specific labels
+                    if task_name == 'stance_classification':
+                        label_0, label_1 = "Refute", "Support"
+                    elif task_name == 'adu_extraction':
+                        label_0, label_1 = "Not ADU", "ADU"
+                    elif task_name == 'claim_premise_linking':
+                        label_0, label_1 = "No Link", "Linked"
+                    else:
+                        label_0, label_1 = "Class 0", "Class 1"
+                    
                     cm_table.add_column("", style="cyan", width=8)
-                    cm_table.add_column("Predicted: 0", style="yellow", justify="right")
-                    cm_table.add_column("Predicted: 1", style="yellow", justify="right")
+                    cm_table.add_column(f"Predicted: {label_0}", style="yellow", justify="right")
+                    cm_table.add_column(f"Predicted: {label_1}", style="yellow", justify="right")
                     
                     # Calculate confusion matrix values
                     tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
@@ -522,10 +585,13 @@ class BenchmarkRunner:
                     fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
                     tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
-                    cm_table.add_row("Actual: 0", str(tn), str(fp))
-                    cm_table.add_row("Actual: 1", str(fn), str(tp))
+                    cm_table.add_row(f"Actual: {label_0}", str(tn), str(fp))
+                    cm_table.add_row(f"Actual: {label_1}", str(fn), str(tp))
                     
                     self.console.print(cm_table)
+            
+            # Print aggregated confusion matrix across all tasks
+            self.print_aggregated_confusion_matrix(results)
         else:
             # Fallback for when Rich is not available
             print("\nDetailed Benchmark Results:")
@@ -570,9 +636,161 @@ class BenchmarkRunner:
                     fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
                     tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
+                    # Get task-specific labels
+                    if task_name == 'stance_classification':
+                        label_0, label_1 = "Refute", "Support"
+                    elif task_name == 'adu_extraction':
+                        label_0, label_1 = "Not ADU", "ADU"
+                    elif task_name == 'claim_premise_linking':
+                        label_0, label_1 = "No Link", "Linked"
+                    else:
+                        label_0, label_1 = "Class 0", "Class 1"
+                    
                     print(f"  Confusion Matrix:")
-                    print(f"    Actual: 0 -> Predicted: 0 = {tn}, Predicted: 1 = {fp}")
-                    print(f"    Actual: 1 -> Predicted: 0 = {fn}, Predicted: 1 = {tp}")
+                    print(f"    Actual: {label_0} -> Predicted: {label_0} = {tn}, Predicted: {label_1} = {fp}")
+                    print(f"    Actual: {label_1} -> Predicted: {label_0} = {fn}, Predicted: {label_1} = {tp}")
+            
+            # Print aggregated confusion matrix across all tasks
+            self.print_aggregated_confusion_matrix_fallback(results)
+
+    def print_aggregated_confusion_matrix(self, results: Dict[str, Any]):
+        """Print aggregated confusion matrix across all tasks and implementations."""
+        if not results:
+            return
+        
+        # Collect all results by implementation
+        impl_results = {}
+        for task_name, task_results in results.items():
+            for result in task_results:
+                if result.success:
+                    if result.implementation_name not in impl_results:
+                        impl_results[result.implementation_name] = []
+                    impl_results[result.implementation_name].append(result)
+        
+        if not impl_results:
+            return
+        
+        # Create aggregated confusion matrix table
+        agg_table = Table(title="Aggregated Confusion Matrix Across All Tasks", box=box.ROUNDED)
+        agg_table.add_column("Implementation", style="cyan", width=15)
+        agg_table.add_column("Predicted: Negative", style="yellow", justify="right")
+        agg_table.add_column("Predicted: Positive", style="yellow", justify="right")
+        agg_table.add_column("Total Samples", style="blue", justify="right")
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            total_samples = len(impl_result_list)
+            
+            # Add row to aggregated table
+            agg_table.add_row(
+                impl_name,
+                str(total_tn + total_fn),  # Predicted: Negative (TN + FN)
+                str(total_tp + total_fp),  # Predicted: Positive (TP + FP)
+                str(total_samples)
+            )
+        
+        self.console.print(agg_table)
+        
+        # Create detailed aggregated confusion matrix
+        detailed_table = Table(title="Detailed Aggregated Confusion Matrix", box=box.ROUNDED)
+        detailed_table.add_column("Implementation", style="cyan", width=15)
+        detailed_table.add_column("", style="cyan", width=8)
+        detailed_table.add_column("Predicted: Negative", style="yellow", justify="right")
+        detailed_table.add_column("Predicted: Positive", style="yellow", justify="right")
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            
+            # Add rows for this implementation
+            detailed_table.add_row(
+                impl_name,
+                "Actual: Negative",
+                str(total_tn),
+                str(total_fp)
+            )
+            detailed_table.add_row(
+                "",
+                "Actual: Positive",
+                str(total_fn),
+                str(total_tp)
+            )
+        
+        self.console.print(detailed_table)
+
+    def print_aggregated_confusion_matrix_fallback(self, results: Dict[str, Any]):
+        """Print aggregated confusion matrix fallback for when Rich is not available."""
+        if not results:
+            return
+        
+        # Collect all results by implementation
+        impl_results = {}
+        for task_name, task_results in results.items():
+            for result in task_results:
+                if result.success:
+                    if result.implementation_name not in impl_results:
+                        impl_results[result.implementation_name] = []
+                    impl_results[result.implementation_name].append(result)
+        
+        if not impl_results:
+            return
+        
+        print("\nAggregated Confusion Matrix Across All Tasks:")
+        print("=" * 60)
+        
+        for impl_name, impl_result_list in impl_results.items():
+            if not impl_result_list:
+                continue
+            
+            # Calculate aggregated confusion matrix values
+            total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+            total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+            total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+            total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+            total_samples = len(impl_result_list)
+            
+            print(f"\n{impl_name}:")
+            print(f"  Total Samples: {total_samples}")
+            print(f"  Confusion Matrix:")
+            print(f"    Actual: Negative -> Predicted: Negative = {total_tn}, Predicted: Positive = {total_fp}")
+            print(f"    Actual: Positive -> Predicted: Negative = {total_fn}, Predicted: Positive = {total_tp}")
+            
+            # Calculate aggregated metrics
+            if total_tp + total_fp > 0:
+                precision = total_tp / (total_tp + total_fp)
+            else:
+                precision = 0.0
+                
+            if total_tp + total_fn > 0:
+                recall = total_tp / (total_tp + total_fn)
+            else:
+                recall = 0.0
+                
+            if precision + recall > 0:
+                f1 = 2 * (precision * recall) / (precision + recall)
+            else:
+                f1 = 0.0
+                
+            accuracy = (total_tp + total_tn) / total_samples if total_samples > 0 else 0.0
+            
+            print(f"  Aggregated Metrics:")
+            print(f"    Accuracy:  {accuracy:.3f}")
+            print(f"    Precision: {precision:.3f}")
+            print(f"    Recall:    {recall:.3f}")
+            print(f"    F1-Score:  {f1:.3f}")
 
     def print_summary(self, results: Dict[str, Any]):
         """Print a summary of the benchmark results."""
@@ -713,6 +931,16 @@ Examples:
                        help=f'Disable ModernBERT implementations (default: {not DEFAULT_ENABLE_MODERNBERT})')
     parser.add_argument('--disable-deberta', action='store_true', default=not DEFAULT_ENABLE_DEBERTA,
                        help=f'Disable DeBERTa implementations (default: {not DEFAULT_ENABLE_DEBERTA})')
+    parser.add_argument('--disable-gpt41', action='store_true', default=not DEFAULT_ENABLE_GPT41,
+                       help=f'Disable GPT-4.1 implementations (default: {not DEFAULT_ENABLE_GPT41})')
+    parser.add_argument('--disable-gpt5', action='store_true', default=not DEFAULT_ENABLE_GPT5,
+                       help=f'Disable GPT-5 implementations (default: {not DEFAULT_ENABLE_GPT5})')
+    parser.add_argument('--disable-gpt5-mini', action='store_true', default=not DEFAULT_ENABLE_GPT5_MINI,
+                       help=f'Disable GPT-5 Mini implementations (default: {not DEFAULT_ENABLE_GPT5_MINI})')
+    parser.add_argument('--disable-llama3-3b', action='store_true', default=not DEFAULT_ENABLE_LLAMA3_3B,
+                       help=f'Disable Llama 3.2 3B implementations (default: {not DEFAULT_ENABLE_LLAMA3_3B})')
+    parser.add_argument('--disable-qwen2-5b', action='store_true', default=not DEFAULT_ENABLE_QWEN2_5B,
+                       help=f'Disable Qwen 2.5 1.5B implementations (default: {not DEFAULT_ENABLE_QWEN2_5B})')
     parser.add_argument('--enable-openai', action='store_true',
                        help='Enable OpenAI implementations (overrides --disable-openai)')
     parser.add_argument('--no-save-csv', action='store_true',
@@ -769,6 +997,11 @@ Examples:
         disable_tinyllama=args.disable_tinyllama,
         disable_modernbert=args.disable_modernbert,
         disable_deberta=args.disable_deberta,
+        disable_gpt41=args.disable_gpt41,
+        disable_gpt5=args.disable_gpt5,
+        disable_gpt5_mini=args.disable_gpt5_mini,
+        disable_llama3_3b=args.disable_llama3_3b,
+        disable_qwen2_5b=args.disable_qwen2_5b,
         save_csv=not args.no_save_csv,
         verbose=args.verbose,
         debug=args.debug,
