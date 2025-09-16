@@ -760,10 +760,6 @@ def save_tasks_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path,
                     'total_tn': impl_metrics['tn_sum'],
                     'total_fp': impl_metrics['fp_sum'],
                     'total_fn': impl_metrics['fn_sum'],
-                    'avg_tp': impl_metrics['tp_sum'] / total_samples,
-                    'avg_tn': impl_metrics['tn_sum'] / total_samples,
-                    'avg_fp': impl_metrics['fp_sum'] / total_samples,
-                    'avg_fn': impl_metrics['fn_sum'] / total_samples,
                     'avg_inference_time': impl_metrics['inference_time_sum'] / total_samples
                 }
                 csv_data.append(row)
@@ -837,10 +833,6 @@ def save_implementations_csv(results: Dict[str, List[BenchmarkResult]], metrics_
                 'total_tn': metrics['tn_sum'],
                 'total_fp': metrics['fp_sum'],
                 'total_fn': metrics['fn_sum'],
-                'avg_tp': metrics['tp_sum'] / total_samples,
-                'avg_tn': metrics['tn_sum'] / total_samples,
-                'avg_fp': metrics['fp_sum'] / total_samples,
-                'avg_fn': metrics['fn_sum'] / total_samples,
                 'avg_inference_time': metrics['inference_time_sum'] / total_samples
             }
             csv_data.append(row)
@@ -910,10 +902,6 @@ def save_system_csv(results: Dict[str, List[BenchmarkResult]], metrics_dir: Path
             'total_tn': overall_metrics['tn_sum'],
             'total_fp': overall_metrics['fp_sum'],
             'total_fn': overall_metrics['fn_sum'],
-            'avg_tp': overall_metrics['tp_sum'] / total_samples,
-            'avg_tn': overall_metrics['tn_sum'] / total_samples,
-            'avg_fp': overall_metrics['fp_sum'] / total_samples,
-            'avg_fn': overall_metrics['fn_sum'] / total_samples,
             'avg_inference_time': overall_metrics['inference_time_sum'] / total_samples
         }
         csv_data.append(row)
