@@ -27,13 +27,15 @@ To update submodules to the latest version from their main branches:
 git submodule update --remote --merge
 ```
 
-### 2. Create a virtual environment (recommended)
+### 2. Create a virtual environment (Python 3.12 recommended)
 
 ```bash
-python -m venv venv
 # On Windows:
+py -3.12 -m venv venv
 venv\Scripts\activate
+
 # On Linux/Mac:
+python -m venv venv
 source venv/bin/activate
 ```
 
