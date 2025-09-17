@@ -16,7 +16,6 @@ try:
 except ImportError as e:
     TINYLLAMA_BASE_AVAILABLE = False
     IMPORT_ERROR = str(e)
-    # Try to provide more helpful error message
     if "relative import" in str(e).lower():
         IMPORT_ERROR = f"Relative import issue: {e}. This is likely due to the external API's import structure."
     else:
@@ -48,7 +47,11 @@ class TinyLlamaBaseImplementation(BaseImplementation):
             # TinyLlama doesn't have linking capability
             self.linker = None
             
-            log_initialization(self.logger, "TinyLlama Base", "success", "Using base model without fine-tuning")
+            # Check if adapter was successfully disabled
+            if hasattr(self.adu_classifier, 'use_adapter') and not self.adu_classifier.use_adapter:
+                log_initialization(self.logger, "TinyLlama Base", "success", "Using base model without fine-tuning")
+            else:
+                log_initialization(self.logger, "TinyLlama Base", "warning", "Expected base model, but adapter might be active or failed to configure")
             return True
         except Exception as e:
             log_initialization(self.logger, "TinyLlama Base", "failed", f"Initialization error: {e}")

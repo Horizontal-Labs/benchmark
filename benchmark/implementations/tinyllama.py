@@ -43,17 +43,17 @@ class TinyLlamaImplementation(BaseImplementation):
             return False
         
         try:
-            # Initialize components with explicit adapter configuration
-            # Use the finetuned adapter by default for better performance
-            self.adu_classifier = TinyLLamaLLMClassifier(use_adapter=True)
+            # Initialize components with default adapter configuration (uses environment variable)
+            # This allows flexibility in configuration while defaulting to the fine-tuned adapter
+            self.adu_classifier = TinyLLamaLLMClassifier(use_adapter=None)
             # TinyLlama doesn't have linking capability
             self.linker = None
             
             # Check if adapter was successfully loaded
             if hasattr(self.adu_classifier, 'use_adapter') and self.adu_classifier.use_adapter:
-                log_initialization(self.logger, "TinyLlama", "success", "Using finetuned adapter")
+                log_initialization(self.logger, "TinyLlama", "success", "Using fine-tuned adapter (default configuration)")
             else:
-                log_initialization(self.logger, "TinyLlama", "warning", "Using base model only - results may be poor")
+                log_initialization(self.logger, "TinyLlama", "warning", "Using base model only - adapter disabled or failed to load")
             return True
         except Exception as e:
             log_initialization(self.logger, "TinyLlama", "failed", f"Initialization error: {e}")

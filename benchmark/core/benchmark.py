@@ -45,13 +45,15 @@ if os.getenv('OPENAI_API_KEY') and not os.getenv('OPEN_AI_KEY'):
 
 # Import local modules
 from ..implementations import (
-    OpenAIImplementation,
     TinyLlamaImplementation,
     TinyLlamaFinetunedImplementation,
     TinyLlamaBaseImplementation,
     ModernBERTImplementation,
     ModernBERTBaseImplementation,
     DeBERTaImplementation,
+    GPT41Implementation,
+    GPT5Implementation,
+    GPT5MiniImplementation,
     Llama33BImplementation,
     Qwen25BImplementation
 )
@@ -73,23 +75,26 @@ logger.info("Successfully imported argument mining components")
 class ArgumentMiningBenchmark:
     """Enhanced benchmark for argument mining implementations with task-specific data preparation."""
 
-    def __init__(self, max_samples: int = 100, disable_openai: bool = False, 
-                 disable_tinyllama: bool = False, disable_tinyllama_finetuned: bool = False,
-                 disable_tinyllama_base: bool = False, disable_modernbert: bool = False,
-                 disable_modernbert_base: bool = False, disable_deberta: bool = False, 
+    def __init__(self, max_samples: int = 100, disable_tinyllama: bool = False, 
+                 disable_tinyllama_finetuned: bool = False, disable_tinyllama_base: bool = False,
+                 disable_modernbert: bool = False, disable_modernbert_base: bool = False,
+                 disable_deberta: bool = False, disable_gpt41: bool = False,
+                 disable_gpt5: bool = False, disable_gpt5_mini: bool = False,
                  disable_llama3_3b: bool = False, disable_qwen2_5b: bool = False):
         """
         Initialize the benchmark.
         
         Args:
             max_samples: Maximum number of samples to use for benchmarking (default: 100)
-            disable_openai: If True, skip OpenAI implementation initialization (default: False)
             disable_tinyllama: If True, skip TinyLlama implementation initialization (default: False)
             disable_tinyllama_finetuned: If True, skip TinyLlama Fine-tuned implementation initialization (default: False)
             disable_tinyllama_base: If True, skip TinyLlama Base implementation initialization (default: False)
             disable_modernbert: If True, skip ModernBERT implementation initialization (default: False)
             disable_modernbert_base: If True, skip ModernBERT Base implementation initialization (default: False)
             disable_deberta: If True, skip DeBERTa implementation initialization (default: False)
+            disable_gpt41: If True, skip GPT-4.1 implementation initialization (default: False)
+            disable_gpt5: If True, skip GPT-5 implementation initialization (default: False)
+            disable_gpt5_mini: If True, skip GPT-5 Mini implementation initialization (default: False)
             disable_llama3_3b: If True, skip Llama 3.2 3B implementation initialization (default: False)
             disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation initialization (default: False)
         """
@@ -98,13 +103,15 @@ class ArgumentMiningBenchmark:
         self.implementations = {}
         self.tasks = {}
         self.max_samples = max_samples
-        self.disable_openai = disable_openai
         self.disable_tinyllama = disable_tinyllama
         self.disable_tinyllama_finetuned = disable_tinyllama_finetuned
         self.disable_tinyllama_base = disable_tinyllama_base
         self.disable_modernbert = disable_modernbert
         self.disable_modernbert_base = disable_modernbert_base
         self.disable_deberta = disable_deberta
+        self.disable_gpt41 = disable_gpt41
+        self.disable_gpt5 = disable_gpt5
+        self.disable_gpt5_mini = disable_gpt5_mini
         self.disable_llama3_3b = disable_llama3_3b
         self.disable_qwen2_5b = disable_qwen2_5b
         self.execution_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -123,8 +130,6 @@ class ArgumentMiningBenchmark:
         
         logger.info(f"Initialized benchmark with max_samples: {self.max_samples}")
         disabled_implementations = []
-        if self.disable_openai:
-            disabled_implementations.append("OpenAI")
         if self.disable_tinyllama:
             disabled_implementations.append("TinyLlama")
         if self.disable_modernbert:
@@ -153,19 +158,47 @@ class ArgumentMiningBenchmark:
         """Initialize all available implementations."""
         implementations = {}
         
-        # OpenAI implementation
-        if not self.disable_openai:
+        # GPT-4.1 implementation
+        if not self.disable_gpt41:
             try:
-                openai_impl = OpenAIImplementation()
-                if openai_impl.initialize():
-                    implementations['openai'] = openai_impl
-                    log_initialization(logger, "OpenAI implementation", "success")
+                gpt41_impl = GPT41Implementation()
+                if gpt41_impl.initialize():
+                    implementations['gpt-4.1'] = gpt41_impl
+                    log_initialization(logger, "GPT-4.1 implementation", "success")
                 else:
-                    log_initialization(logger, "OpenAI implementation", "failed", "Initialization returned False")
+                    log_initialization(logger, "GPT-4.1 implementation", "failed", "Initialization returned False")
             except Exception as e:
-                log_initialization(logger, "OpenAI implementation", "failed", str(e))
+                log_initialization(logger, "GPT-4.1 implementation", "failed", str(e))
         else:
-            log_initialization(logger, "OpenAI implementation", "disabled")
+            log_initialization(logger, "GPT-4.1 implementation", "disabled")
+        
+        # GPT-5 implementation
+        if not self.disable_gpt5:
+            try:
+                gpt5_impl = GPT5Implementation()
+                if gpt5_impl.initialize():
+                    implementations['gpt-5'] = gpt5_impl
+                    log_initialization(logger, "GPT-5 implementation", "success")
+                else:
+                    log_initialization(logger, "GPT-5 implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "GPT-5 implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "GPT-5 implementation", "disabled")
+        
+        # GPT-5 Mini implementation
+        if not self.disable_gpt5_mini:
+            try:
+                gpt5_mini_impl = GPT5MiniImplementation()
+                if gpt5_mini_impl.initialize():
+                    implementations['gpt-5-mini'] = gpt5_mini_impl
+                    log_initialization(logger, "GPT-5 Mini implementation", "success")
+                else:
+                    log_initialization(logger, "GPT-5 Mini implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "GPT-5 Mini implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "GPT-5 Mini implementation", "disabled")
         
         # TinyLlama implementation
         if not self.disable_tinyllama:

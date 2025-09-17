@@ -22,8 +22,7 @@ warnings.filterwarnings('ignore')
 # =============================================================================
 
 # Core benchmark settings
-DEFAULT_MAX_SAMPLES = 100
-DEFAULT_DISABLE_OPENAI = True
+DEFAULT_MAX_SAMPLES = 50
 DEFAULT_SAVE_CSV = True
 
 # Output and debugging
@@ -34,20 +33,20 @@ DEFAULT_OUTPUT_DIR = 'results'
 # Task enable/disable flags (True = enabled by default, False = disabled by default)
 DEFAULT_ENABLE_ADU_EXTRACTION = True
 DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
-DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
+DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = False
+
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
-DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
 DEFAULT_ENABLE_TINYLLAMA_FINETUNED = True
 DEFAULT_ENABLE_TINYLLAMA_BASE = True
 DEFAULT_ENABLE_MODERNBERT = True
 DEFAULT_ENABLE_MODERNBERT_BASE = True
-DEFAULT_ENABLE_DEBERTA = True
-DEFAULT_ENABLE_GPT41 = True
-DEFAULT_ENABLE_GPT5 = True
-DEFAULT_ENABLE_GPT5_MINI = True
-DEFAULT_ENABLE_LLAMA3_3B = True
-DEFAULT_ENABLE_QWEN2_5B = True
+DEFAULT_ENABLE_DEBERTA = False
+DEFAULT_ENABLE_GPT41 = False
+DEFAULT_ENABLE_GPT5 = False
+DEFAULT_ENABLE_GPT5_MINI = False
+DEFAULT_ENABLE_LLAMA3_3B = False
+DEFAULT_ENABLE_QWEN2_5B = False
 
 # Quick presets
 DEFAULT_QUICK_MAX_SAMPLES = 10
@@ -92,8 +91,6 @@ def get_default_task_filter() -> Optional[List[str]]:
 def get_default_implementation_filter() -> Optional[List[str]]:
     """Get default implementation filter based on enabled implementations."""
     implementations = []
-    if DEFAULT_ENABLE_OPENAI:
-        implementations.append('openai')
     if DEFAULT_ENABLE_TINYLLAMA:
         implementations.append('tinyllama')
     if DEFAULT_ENABLE_TINYLLAMA_FINETUNED:
@@ -124,7 +121,6 @@ class BenchmarkRunner:
     
     def __init__(self, 
                  max_samples: int = 100,
-                 disable_openai: bool = True,
                  disable_tinyllama: bool = False,
                  disable_tinyllama_finetuned: bool = False,
                  disable_tinyllama_base: bool = False,
@@ -147,13 +143,14 @@ class BenchmarkRunner:
         
         Args:
             max_samples: Maximum number of samples to use for benchmarking
-            disable_openai: If True, skip OpenAI implementation
             disable_tinyllama: If True, skip TinyLlama implementation
             disable_tinyllama_finetuned: If True, skip TinyLlama Fine-tuned implementation
-            disable_tinyllama_base: If True, skip TinyLlama Base implementation
             disable_modernbert: If True, skip ModernBERT implementation
             disable_modernbert_base: If True, skip ModernBERT Base implementation
             disable_deberta: If True, skip DeBERTa implementation
+            disable_gpt41: If True, skip GPT-4.1 implementation
+            disable_gpt5: If True, skip GPT-5 implementation
+            disable_gpt5_mini: If True, skip GPT-5 Mini implementation
             disable_llama3_3b: If True, skip Llama 3.2 3B implementation
             disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation
             save_csv: Whether to save results to CSV files
@@ -164,7 +161,6 @@ class BenchmarkRunner:
             output_dir: Output directory for results
         """
         self.max_samples = max_samples
-        self.disable_openai = disable_openai
         self.disable_tinyllama = disable_tinyllama
         self.disable_tinyllama_finetuned = disable_tinyllama_finetuned
         self.disable_tinyllama_base = disable_tinyllama_base
@@ -205,13 +201,15 @@ class BenchmarkRunner:
             config_table.add_column("Value", style="green")
             
             config_table.add_row("Max Samples", str(self.max_samples))
-            config_table.add_row("OpenAI Disabled", str(self.disable_openai))
             config_table.add_row("TinyLlama Disabled", str(self.disable_tinyllama))
             config_table.add_row("TinyLlama Fine-tuned Disabled", str(self.disable_tinyllama_finetuned))
             config_table.add_row("TinyLlama Base Disabled", str(self.disable_tinyllama_base))
             config_table.add_row("ModernBERT Disabled", str(self.disable_modernbert))
             config_table.add_row("ModernBERT Base Disabled", str(self.disable_modernbert_base))
             config_table.add_row("DeBERTa Disabled", str(self.disable_deberta))
+            config_table.add_row("GPT-4.1 Disabled", str(self.disable_gpt41))
+            config_table.add_row("GPT-5 Disabled", str(self.disable_gpt5))
+            config_table.add_row("GPT-5 Mini Disabled", str(self.disable_gpt5_mini))
             config_table.add_row("Llama 3.2 3B Disabled", str(self.disable_llama3_3b))
             config_table.add_row("Qwen 2.5 1.5B Disabled", str(self.disable_qwen2_5b))
             config_table.add_row("Save CSV", str(self.save_csv))
@@ -225,13 +223,14 @@ class BenchmarkRunner:
         else:
             print("Benchmark Configuration:")
             print(f"  Max Samples: {self.max_samples}")
-            print(f"  OpenAI Disabled: {self.disable_openai}")
             print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
             print(f"  TinyLlama Fine-tuned Disabled: {self.disable_tinyllama_finetuned}")
-            print(f"  TinyLlama Base Disabled: {self.disable_tinyllama_base}")
             print(f"  ModernBERT Disabled: {self.disable_modernbert}")
             print(f"  ModernBERT Base Disabled: {self.disable_modernbert_base}")
             print(f"  DeBERTa Disabled: {self.disable_deberta}")
+            print(f"  GPT-4.1 Disabled: {self.disable_gpt41}")
+            print(f"  GPT-5 Disabled: {self.disable_gpt5}")
+            print(f"  GPT-5 Mini Disabled: {self.disable_gpt5_mini}")
             print(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
             print(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
             print(f"  Save CSV: {self.save_csv}")
@@ -252,13 +251,15 @@ class BenchmarkRunner:
             
             self.benchmark = ArgumentMiningBenchmark(
                 max_samples=self.max_samples,
-                disable_openai=self.disable_openai,
                 disable_tinyllama=self.disable_tinyllama,
                 disable_tinyllama_finetuned=self.disable_tinyllama_finetuned,
                 disable_tinyllama_base=self.disable_tinyllama_base,
                 disable_modernbert=self.disable_modernbert,
                 disable_modernbert_base=self.disable_modernbert_base,
                 disable_deberta=self.disable_deberta,
+                disable_gpt41=self.disable_gpt41,
+                disable_gpt5=self.disable_gpt5,
+                disable_gpt5_mini=self.disable_gpt5_mini,
                 disable_llama3_3b=self.disable_llama3_3b,
                 disable_qwen2_5b=self.disable_qwen2_5b
             )
@@ -300,8 +301,6 @@ class BenchmarkRunner:
         implementations_to_run = self.implementation_filter if self.implementation_filter else list(self.benchmark.implementations.keys())
         
         # Filter out disabled implementations
-        if self.disable_openai:
-            implementations_to_run = [impl for impl in implementations_to_run if impl != 'openai']
         if self.disable_tinyllama:
             implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama']
         if self.disable_tinyllama_finetuned:
@@ -559,22 +558,33 @@ class BenchmarkRunner:
                 task_table.add_column("Precision", style="green", justify="right")
                 task_table.add_column("Recall", style="green", justify="right")
                 task_table.add_column("F1-Score", style="green", justify="right")
+                task_table.add_column("Avg Time (s)", style="magenta", justify="right")
                 task_table.add_column("TP", style="yellow", justify="right")
+                task_table.add_column("TN", style="blue", justify="right")
                 task_table.add_column("FP", style="red", justify="right")
                 task_table.add_column("FN", style="red", justify="right")
-                task_table.add_column("TN", style="blue", justify="right")
                 task_table.add_column("Samples", style="blue", justify="right")
                 
                 for impl_name, impl_result_list in impl_results.items():
                     if not impl_result_list:
                         continue
                     
-                    # Calculate average metrics
+                    # Calculate average metrics for accuracy, precision, recall, f1
                     import numpy as np
                     avg_metrics = {}
                     for metric_name in impl_result_list[0].metrics.keys():
                         values = [r.metrics[metric_name] for r in impl_result_list if r.success]
                         avg_metrics[metric_name] = np.mean(values) if values else 0.0
+                    
+                    # Calculate average timing
+                    timing_values = [r.performance.get('inference_time', 0) for r in impl_result_list if r.success]
+                    avg_timing = np.mean(timing_values) if timing_values else 0.0
+                    
+                    # Calculate total confusion matrix values (not averages)
+                    total_tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+                    total_fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+                    total_fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+                    total_tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
                     # Add row to table
                     task_table.add_row(
@@ -583,9 +593,11 @@ class BenchmarkRunner:
                         f"{avg_metrics.get('precision', 0.0):.3f}",
                         f"{avg_metrics.get('recall', 0.0):.3f}",
                         f"{avg_metrics.get('f1', 0.0):.3f}",
-                        str(avg_metrics.get('tp', 0)),
-                        str(avg_metrics.get('fp', 0)),
-                        str(avg_metrics.get('fn', 0)),
+                        f"{avg_timing:.3f}",
+                        str(total_tp),
+                        str(total_fp),
+                        str(total_fn),
+                        str(total_tn),
                         str(len(impl_result_list))
                     )
                 
@@ -657,18 +669,27 @@ class BenchmarkRunner:
                         values = [r.metrics[metric_name] for r in impl_result_list if r.success]
                         avg_metrics[metric_name] = np.mean(values) if values else 0.0
                     
+                    # Calculate average timing
+                    timing_values = [r.performance.get('inference_time', 0) for r in impl_result_list if r.success]
+                    avg_timing = np.mean(timing_values) if timing_values else 0.0
+                    
+                    # Calculate total confusion matrix values
+                    tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
+                    fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
+                    fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
+                    tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
+                    
                     print(f"\n{impl_name}:")
                     print(f"  Accuracy:  {avg_metrics.get('accuracy', 0.0):.3f}")
                     print(f"  Precision: {avg_metrics.get('precision', 0.0):.3f}")
                     print(f"  Recall:    {avg_metrics.get('recall', 0.0):.3f}")
                     print(f"  F1-Score:  {avg_metrics.get('f1', 0.0):.3f}")
+                    print(f"  Avg Time:  {avg_timing:.3f}s")
+                    print(f"  TP:        {tp}")
+                    print(f"  FP:        {fp}")
+                    print(f"  FN:        {fn}")
+                    print(f"  TN:        {tn}")
                     print(f"  Samples:   {len(impl_result_list)}")
-                    
-                    # Confusion matrix
-                    tp = sum(r.metrics.get('tp', 0) for r in impl_result_list)
-                    fp = sum(r.metrics.get('fp', 0) for r in impl_result_list)
-                    fn = sum(r.metrics.get('fn', 0) for r in impl_result_list)
-                    tn = sum(r.metrics.get('tn', 0) for r in impl_result_list)
                     
                     # Get task-specific labels
                     if task_name == 'stance_classification':
@@ -957,8 +978,6 @@ Examples:
     # Core benchmark settings
     parser.add_argument('--max-samples', type=int, default=DEFAULT_MAX_SAMPLES,
                        help=f'Maximum number of samples to use for benchmarking (default: {DEFAULT_MAX_SAMPLES})')
-    parser.add_argument('--disable-openai', action='store_true', default=DEFAULT_DISABLE_OPENAI,
-                       help=f'Disable OpenAI implementations (default: {DEFAULT_DISABLE_OPENAI})')
     parser.add_argument('--disable-tinyllama', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA,
                        help=f'Disable TinyLlama implementations (default: {not DEFAULT_ENABLE_TINYLLAMA})')
     parser.add_argument('--disable-tinyllama-finetuned', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA_FINETUNED,
@@ -999,7 +1018,7 @@ Examples:
                        choices=['adu_extraction', 'stance_classification', 'claim_premise_linking'],
                        help='Run only specific tasks')
     parser.add_argument('--impl-filter', nargs='+',
-                       choices=['openai', 'tinyllama', 'tinyllama-finetuned', 'tinyllama-base', 
+                       choices=['tinyllama', 'tinyllama-finetuned', 'tinyllama-base',
                                'modernbert', 'modernbert-base', 'deberta', 'gpt-4.1', 'gpt-5', 
                                'gpt-5-mini', 'llama3-3b', 'qwen2.5-1.5b'],
                        help='Run only specific implementations')
@@ -1012,20 +1031,14 @@ Examples:
     
     args = parser.parse_args()
     
-    # Handle OpenAI enable/disable logic
-    if args.enable_openai:
-        args.disable_openai = False
-    
     # Apply presets
     if args.quick:
         args.max_samples = DEFAULT_QUICK_MAX_SAMPLES
-        args.disable_openai = True
         args.verbose = True
-        print(f"Quick test mode enabled: {DEFAULT_QUICK_MAX_SAMPLES} samples, no OpenAI, verbose output")
+        print(f"Quick test mode enabled: {DEFAULT_QUICK_MAX_SAMPLES} samples, verbose output")
     
     if args.full:
         args.max_samples = DEFAULT_FULL_MAX_SAMPLES
-        args.disable_openai = False
         print(f"Full benchmark mode enabled: {DEFAULT_FULL_MAX_SAMPLES} samples, all implementations")
     
     # Use default filters if none specified
@@ -1035,10 +1048,8 @@ Examples:
     # Create and run benchmark
     runner = BenchmarkRunner(
         max_samples=args.max_samples,
-        disable_openai=args.disable_openai,
         disable_tinyllama=args.disable_tinyllama,
         disable_tinyllama_finetuned=args.disable_tinyllama_finetuned,
-        disable_tinyllama_base=args.disable_tinyllama_base,
         disable_modernbert=args.disable_modernbert,
         disable_modernbert_base=args.disable_modernbert_base,
         disable_deberta=args.disable_deberta,
