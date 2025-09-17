@@ -10,7 +10,7 @@ from ..utils.logging_utils import get_logger, log_initialization
 
 # Import ModernBERT components
 try:
-    from argmining.implementations.encoder_model_loader import NonTrainedEncoderModelLoader, MODEL_CONFIGS
+    from argmining.implementations.encoder_model_loader import PeftEncoderModelLoader, MODEL_CONFIGS
     MODERNBERT_BASE_AVAILABLE = True
     IMPORT_ERROR = None
 except ImportError as e:
@@ -44,12 +44,10 @@ class ModernBERTBaseImplementation(BaseImplementation):
         
         try:
             # Initialize components using base ModernBERT model without adapters
-            # Use the same base model as the fine-tuned version but without PEFT adapters
-            self.adu_classifier = NonTrainedEncoderModelLoader(
-                model_paths={
-                    "type_model_path": "answerdotai/ModernBERT-base",
-                    "stance_model_path": "answerdotai/ModernBERT-base"
-                }
+            # Use PeftEncoderModelLoader but with empty adapter paths to use only the base model
+            self.adu_classifier = PeftEncoderModelLoader(
+                base_model_path="answerdotai/ModernBERT-base",
+                adapter_paths={}  # Empty adapter paths means no fine-tuning, just base model
             )
             # ModernBERT doesn't have linking capability
             self.linker = None

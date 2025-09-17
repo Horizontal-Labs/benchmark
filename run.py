@@ -22,7 +22,7 @@ warnings.filterwarnings('ignore')
 # =============================================================================
 
 # Core benchmark settings
-DEFAULT_MAX_SAMPLES = 50
+DEFAULT_MAX_SAMPLES = 100
 DEFAULT_SAVE_CSV = True
 
 # Output and debugging
@@ -36,9 +36,9 @@ DEFAULT_ENABLE_STANCE_CLASSIFICATION = True
 DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = False
 
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
-DEFAULT_ENABLE_TINYLLAMA = True
-DEFAULT_ENABLE_TINYLLAMA_FINETUNED = True
-DEFAULT_ENABLE_TINYLLAMA_BASE = True
+DEFAULT_ENABLE_TINYLLAMA = False
+DEFAULT_ENABLE_TINYLLAMA_FINETUNED = False
+DEFAULT_ENABLE_TINYLLAMA_BASE = False
 DEFAULT_ENABLE_MODERNBERT = True
 DEFAULT_ENABLE_MODERNBERT_BASE = True
 DEFAULT_ENABLE_DEBERTA = False
@@ -69,7 +69,11 @@ try:
     from rich import box
     PROGRESS_AVAILABLE = True
 except ImportError:
-    print("Warning: Rich and tqdm not available. Install with: pip install rich tqdm")
+    # Use basic logging since rich is not available
+    import logging
+    logging.basicConfig(level=logging.WARNING)
+    logger = logging.getLogger(__name__)
+    logger.warning("Rich and tqdm not available. Install with: pip install rich tqdm")
     PROGRESS_AVAILABLE = False
 
 from benchmark.core.benchmark import ArgumentMiningBenchmark
@@ -221,24 +225,24 @@ class BenchmarkRunner:
             
             self.console.print(config_table)
         else:
-            print("Benchmark Configuration:")
-            print(f"  Max Samples: {self.max_samples}")
-            print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
-            print(f"  TinyLlama Fine-tuned Disabled: {self.disable_tinyllama_finetuned}")
-            print(f"  ModernBERT Disabled: {self.disable_modernbert}")
-            print(f"  ModernBERT Base Disabled: {self.disable_modernbert_base}")
-            print(f"  DeBERTa Disabled: {self.disable_deberta}")
-            print(f"  GPT-4.1 Disabled: {self.disable_gpt41}")
-            print(f"  GPT-5 Disabled: {self.disable_gpt5}")
-            print(f"  GPT-5 Mini Disabled: {self.disable_gpt5_mini}")
-            print(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
-            print(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
-            print(f"  Save CSV: {self.save_csv}")
-            print(f"  Verbose: {self.verbose}")
-            print(f"  Debug: {self.debug}")
-            print(f"  Task Filter: {self.task_filter if self.task_filter else 'All tasks'}")
-            print(f"  Implementation Filter: {self.implementation_filter if self.implementation_filter else 'All implementations'}")
-            print(f"  Output Directory: {self.output_dir}")
+            self.logger.info("Benchmark Configuration:")
+            self.logger.info(f"  Max Samples: {self.max_samples}")
+            self.logger.info(f"  TinyLlama Disabled: {self.disable_tinyllama}")
+            self.logger.info(f"  TinyLlama Fine-tuned Disabled: {self.disable_tinyllama_finetuned}")
+            self.logger.info(f"  ModernBERT Disabled: {self.disable_modernbert}")
+            self.logger.info(f"  ModernBERT Base Disabled: {self.disable_modernbert_base}")
+            self.logger.info(f"  DeBERTa Disabled: {self.disable_deberta}")
+            self.logger.info(f"  GPT-4.1 Disabled: {self.disable_gpt41}")
+            self.logger.info(f"  GPT-5 Disabled: {self.disable_gpt5}")
+            self.logger.info(f"  GPT-5 Mini Disabled: {self.disable_gpt5_mini}")
+            self.logger.info(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
+            self.logger.info(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
+            self.logger.info(f"  Save CSV: {self.save_csv}")
+            self.logger.info(f"  Verbose: {self.verbose}")
+            self.logger.info(f"  Debug: {self.debug}")
+            self.logger.info(f"  Task Filter: {self.task_filter if self.task_filter else 'All tasks'}")
+            self.logger.info(f"  Implementation Filter: {self.implementation_filter if self.implementation_filter else 'All implementations'}")
+            self.logger.info(f"  Output Directory: {self.output_dir}")
     
     def initialize_benchmark(self) -> bool:
         """Initialize the benchmark and return success status."""
@@ -247,7 +251,7 @@ class BenchmarkRunner:
                 if self.console:
                     self.console.print("\n[bold blue]Initializing benchmark...[/bold blue]")
                 else:
-                    print("Initializing benchmark...")
+                    self.logger.info("Initializing benchmark...")
             
             self.benchmark = ArgumentMiningBenchmark(
                 max_samples=self.max_samples,
@@ -270,9 +274,9 @@ class BenchmarkRunner:
                     self.console.print(f"Available implementations: {list(self.benchmark.implementations.keys())}")
                     self.console.print(f"Available tasks: {list(self.benchmark.tasks.keys())}")
                 else:
-                    print("✓ Benchmark initialized successfully")
-                    print(f"Available implementations: {list(self.benchmark.implementations.keys())}")
-                    print(f"Available tasks: {list(self.benchmark.tasks.keys())}")
+                    self.logger.info("✓ Benchmark initialized successfully")
+                    self.logger.info(f"Available implementations: {list(self.benchmark.implementations.keys())}")
+                    self.logger.info(f"Available tasks: {list(self.benchmark.tasks.keys())}")
             
             return True
             
@@ -281,7 +285,7 @@ class BenchmarkRunner:
             if self.console:
                 self.console.print(f"[red]✗ {error_msg}[/red]")
             else:
-                print(f"✗ {error_msg}")
+                self.logger.error(f"✗ {error_msg}")
             
             if self.debug:
                 import traceback
@@ -423,7 +427,7 @@ class BenchmarkRunner:
                                 import traceback
                                 traceback.print_exc()
                         
-                        progress.update(impl_progress, advance=1)
+                        # Progress is already updated by the RichProgressWrapper during execution
                         progress.update(task_progress, advance=1)
                         progress.update(overall_task, advance=1)
                     
@@ -434,7 +438,7 @@ class BenchmarkRunner:
         
         else:
             # Fallback to simple progress without rich
-            print(f"Running benchmark with {total_combinations} task-implementation combinations...")
+            self.logger.info(f"Running benchmark with {total_combinations} task-implementation combinations...")
             
             all_results = {}
             completed = 0
@@ -443,7 +447,7 @@ class BenchmarkRunner:
                 if task_name not in self.benchmark.tasks:
                     continue
                 
-                print(f"\nRunning task: {task_name}")
+                self.logger.info(f"\nRunning task: {task_name}")
                 task_results = []
                 
                 for impl_name in implementations_to_run:
@@ -453,7 +457,7 @@ class BenchmarkRunner:
                     implementation = self.benchmark.implementations[impl_name]
                     
                     if not implementation.supports_task(task_name):
-                        print(f"  Skipping {impl_name} (not supported)")
+                        self.logger.info(f"  Skipping {impl_name} (not supported)")
                         completed += 1
                         continue
                     
@@ -522,7 +526,7 @@ class BenchmarkRunner:
             if self.console:
                 self.console.print(f"[red]✗ {error_msg}[/red]")
             else:
-                print(f"✗ {error_msg}")
+                self.logger.error(f"✗ {error_msg}")
             
             if self.debug:
                 import traceback
@@ -949,7 +953,7 @@ class BenchmarkRunner:
             if self.console:
                 self.console.print(f"[red]✗ {error_msg}[/red]")
             else:
-                print(f"✗ {error_msg}")
+                self.logger.error(f"✗ {error_msg}")
             
             if self.debug:
                 import traceback
