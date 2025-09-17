@@ -24,7 +24,13 @@ except ImportError as e:
 
 
 class TinyLlamaImplementation(BaseImplementation):
-    """TinyLlama implementation for argument mining."""
+    """
+    TinyLlama implementation for argument mining.
+    
+    Note: This implementation uses the finetuned adapter by default for better performance.
+    If the adapter fails to load, it will fall back to the base model, which may produce poor results.
+    You can control this behavior with the TINYLLAMA_USE_ADAPTER environment variable.
+    """
     
     def __init__(self):
         super().__init__("tinyllama")
@@ -37,12 +43,17 @@ class TinyLlamaImplementation(BaseImplementation):
             return False
         
         try:
-            # Initialize components
-            self.adu_classifier = TinyLLamaLLMClassifier()
+            # Initialize components with explicit adapter configuration
+            # Use the finetuned adapter by default for better performance
+            self.adu_classifier = TinyLLamaLLMClassifier(use_adapter=True)
             # TinyLlama doesn't have linking capability
             self.linker = None
             
-            log_initialization(self.logger, "TinyLlama", "success")
+            # Check if adapter was successfully loaded
+            if hasattr(self.adu_classifier, 'use_adapter') and self.adu_classifier.use_adapter:
+                log_initialization(self.logger, "TinyLlama", "success", "Using finetuned adapter")
+            else:
+                log_initialization(self.logger, "TinyLlama", "warning", "Using base model only - results may be poor")
             return True
         except Exception as e:
             log_initialization(self.logger, "TinyLlama", "failed", f"Initialization error: {e}")

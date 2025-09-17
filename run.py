@@ -38,7 +38,10 @@ DEFAULT_ENABLE_CLAIM_PREMISE_LINKING = True
 # Implementation enable/disable flags (True = enabled by default, False = disabled by default)
 DEFAULT_ENABLE_OPENAI = True
 DEFAULT_ENABLE_TINYLLAMA = True
+DEFAULT_ENABLE_TINYLLAMA_FINETUNED = True
+DEFAULT_ENABLE_TINYLLAMA_BASE = True
 DEFAULT_ENABLE_MODERNBERT = True
+DEFAULT_ENABLE_MODERNBERT_BASE = True
 DEFAULT_ENABLE_DEBERTA = True
 DEFAULT_ENABLE_GPT41 = True
 DEFAULT_ENABLE_GPT5 = True
@@ -93,8 +96,14 @@ def get_default_implementation_filter() -> Optional[List[str]]:
         implementations.append('openai')
     if DEFAULT_ENABLE_TINYLLAMA:
         implementations.append('tinyllama')
+    if DEFAULT_ENABLE_TINYLLAMA_FINETUNED:
+        implementations.append('tinyllama-finetuned')
+    if DEFAULT_ENABLE_TINYLLAMA_BASE:
+        implementations.append('tinyllama-base')
     if DEFAULT_ENABLE_MODERNBERT:
         implementations.append('modernbert')
+    if DEFAULT_ENABLE_MODERNBERT_BASE:
+        implementations.append('modernbert-base')
     if DEFAULT_ENABLE_DEBERTA:
         implementations.append('deberta')
     if DEFAULT_ENABLE_GPT41:
@@ -117,7 +126,10 @@ class BenchmarkRunner:
                  max_samples: int = 100,
                  disable_openai: bool = True,
                  disable_tinyllama: bool = False,
+                 disable_tinyllama_finetuned: bool = False,
+                 disable_tinyllama_base: bool = False,
                  disable_modernbert: bool = False,
+                 disable_modernbert_base: bool = False,
                  disable_deberta: bool = False,
                  disable_gpt41: bool = False,
                  disable_gpt5: bool = False,
@@ -137,7 +149,10 @@ class BenchmarkRunner:
             max_samples: Maximum number of samples to use for benchmarking
             disable_openai: If True, skip OpenAI implementation
             disable_tinyllama: If True, skip TinyLlama implementation
+            disable_tinyllama_finetuned: If True, skip TinyLlama Fine-tuned implementation
+            disable_tinyllama_base: If True, skip TinyLlama Base implementation
             disable_modernbert: If True, skip ModernBERT implementation
+            disable_modernbert_base: If True, skip ModernBERT Base implementation
             disable_deberta: If True, skip DeBERTa implementation
             disable_llama3_3b: If True, skip Llama 3.2 3B implementation
             disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation
@@ -151,7 +166,10 @@ class BenchmarkRunner:
         self.max_samples = max_samples
         self.disable_openai = disable_openai
         self.disable_tinyllama = disable_tinyllama
+        self.disable_tinyllama_finetuned = disable_tinyllama_finetuned
+        self.disable_tinyllama_base = disable_tinyllama_base
         self.disable_modernbert = disable_modernbert
+        self.disable_modernbert_base = disable_modernbert_base
         self.disable_deberta = disable_deberta
         self.disable_gpt41 = disable_gpt41
         self.disable_gpt5 = disable_gpt5
@@ -189,7 +207,10 @@ class BenchmarkRunner:
             config_table.add_row("Max Samples", str(self.max_samples))
             config_table.add_row("OpenAI Disabled", str(self.disable_openai))
             config_table.add_row("TinyLlama Disabled", str(self.disable_tinyllama))
+            config_table.add_row("TinyLlama Fine-tuned Disabled", str(self.disable_tinyllama_finetuned))
+            config_table.add_row("TinyLlama Base Disabled", str(self.disable_tinyllama_base))
             config_table.add_row("ModernBERT Disabled", str(self.disable_modernbert))
+            config_table.add_row("ModernBERT Base Disabled", str(self.disable_modernbert_base))
             config_table.add_row("DeBERTa Disabled", str(self.disable_deberta))
             config_table.add_row("Llama 3.2 3B Disabled", str(self.disable_llama3_3b))
             config_table.add_row("Qwen 2.5 1.5B Disabled", str(self.disable_qwen2_5b))
@@ -206,7 +227,10 @@ class BenchmarkRunner:
             print(f"  Max Samples: {self.max_samples}")
             print(f"  OpenAI Disabled: {self.disable_openai}")
             print(f"  TinyLlama Disabled: {self.disable_tinyllama}")
+            print(f"  TinyLlama Fine-tuned Disabled: {self.disable_tinyllama_finetuned}")
+            print(f"  TinyLlama Base Disabled: {self.disable_tinyllama_base}")
             print(f"  ModernBERT Disabled: {self.disable_modernbert}")
+            print(f"  ModernBERT Base Disabled: {self.disable_modernbert_base}")
             print(f"  DeBERTa Disabled: {self.disable_deberta}")
             print(f"  Llama 3.2 3B Disabled: {self.disable_llama3_3b}")
             print(f"  Qwen 2.5 1.5B Disabled: {self.disable_qwen2_5b}")
@@ -230,7 +254,10 @@ class BenchmarkRunner:
                 max_samples=self.max_samples,
                 disable_openai=self.disable_openai,
                 disable_tinyllama=self.disable_tinyllama,
+                disable_tinyllama_finetuned=self.disable_tinyllama_finetuned,
+                disable_tinyllama_base=self.disable_tinyllama_base,
                 disable_modernbert=self.disable_modernbert,
+                disable_modernbert_base=self.disable_modernbert_base,
                 disable_deberta=self.disable_deberta,
                 disable_llama3_3b=self.disable_llama3_3b,
                 disable_qwen2_5b=self.disable_qwen2_5b
@@ -277,8 +304,14 @@ class BenchmarkRunner:
             implementations_to_run = [impl for impl in implementations_to_run if impl != 'openai']
         if self.disable_tinyllama:
             implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama']
+        if self.disable_tinyllama_finetuned:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama-finetuned']
+        if self.disable_tinyllama_base:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'tinyllama-base']
         if self.disable_modernbert:
             implementations_to_run = [impl for impl in implementations_to_run if impl != 'modernbert']
+        if self.disable_modernbert_base:
+            implementations_to_run = [impl for impl in implementations_to_run if impl != 'modernbert-base']
         if self.disable_deberta:
             implementations_to_run = [impl for impl in implementations_to_run if impl != 'deberta']
         if self.disable_gpt41:
@@ -529,6 +562,7 @@ class BenchmarkRunner:
                 task_table.add_column("TP", style="yellow", justify="right")
                 task_table.add_column("FP", style="red", justify="right")
                 task_table.add_column("FN", style="red", justify="right")
+                task_table.add_column("TN", style="blue", justify="right")
                 task_table.add_column("Samples", style="blue", justify="right")
                 
                 for impl_name, impl_result_list in impl_results.items():
@@ -927,8 +961,14 @@ Examples:
                        help=f'Disable OpenAI implementations (default: {DEFAULT_DISABLE_OPENAI})')
     parser.add_argument('--disable-tinyllama', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA,
                        help=f'Disable TinyLlama implementations (default: {not DEFAULT_ENABLE_TINYLLAMA})')
+    parser.add_argument('--disable-tinyllama-finetuned', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA_FINETUNED,
+                       help=f'Disable TinyLlama Fine-tuned implementations (default: {not DEFAULT_ENABLE_TINYLLAMA_FINETUNED})')
+    parser.add_argument('--disable-tinyllama-base', action='store_true', default=not DEFAULT_ENABLE_TINYLLAMA_BASE,
+                       help=f'Disable TinyLlama Base implementations (default: {not DEFAULT_ENABLE_TINYLLAMA_BASE})')
     parser.add_argument('--disable-modernbert', action='store_true', default=not DEFAULT_ENABLE_MODERNBERT,
                        help=f'Disable ModernBERT implementations (default: {not DEFAULT_ENABLE_MODERNBERT})')
+    parser.add_argument('--disable-modernbert-base', action='store_true', default=not DEFAULT_ENABLE_MODERNBERT_BASE,
+                       help=f'Disable ModernBERT Base implementations (default: {not DEFAULT_ENABLE_MODERNBERT_BASE})')
     parser.add_argument('--disable-deberta', action='store_true', default=not DEFAULT_ENABLE_DEBERTA,
                        help=f'Disable DeBERTa implementations (default: {not DEFAULT_ENABLE_DEBERTA})')
     parser.add_argument('--disable-gpt41', action='store_true', default=not DEFAULT_ENABLE_GPT41,
@@ -959,7 +999,9 @@ Examples:
                        choices=['adu_extraction', 'stance_classification', 'claim_premise_linking'],
                        help='Run only specific tasks')
     parser.add_argument('--impl-filter', nargs='+',
-                       choices=['openai', 'tinyllama', 'modernbert', 'deberta'],
+                       choices=['openai', 'tinyllama', 'tinyllama-finetuned', 'tinyllama-base', 
+                               'modernbert', 'modernbert-base', 'deberta', 'gpt-4.1', 'gpt-5', 
+                               'gpt-5-mini', 'llama3-3b', 'qwen2.5-1.5b'],
                        help='Run only specific implementations')
     
     # Quick presets
@@ -995,7 +1037,10 @@ Examples:
         max_samples=args.max_samples,
         disable_openai=args.disable_openai,
         disable_tinyllama=args.disable_tinyllama,
+        disable_tinyllama_finetuned=args.disable_tinyllama_finetuned,
+        disable_tinyllama_base=args.disable_tinyllama_base,
         disable_modernbert=args.disable_modernbert,
+        disable_modernbert_base=args.disable_modernbert_base,
         disable_deberta=args.disable_deberta,
         disable_gpt41=args.disable_gpt41,
         disable_gpt5=args.disable_gpt5,

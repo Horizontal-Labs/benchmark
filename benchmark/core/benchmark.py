@@ -47,7 +47,10 @@ if os.getenv('OPENAI_API_KEY') and not os.getenv('OPEN_AI_KEY'):
 from ..implementations import (
     OpenAIImplementation,
     TinyLlamaImplementation,
+    TinyLlamaFinetunedImplementation,
+    TinyLlamaBaseImplementation,
     ModernBERTImplementation,
+    ModernBERTBaseImplementation,
     DeBERTaImplementation,
     Llama33BImplementation,
     Qwen25BImplementation
@@ -71,9 +74,10 @@ class ArgumentMiningBenchmark:
     """Enhanced benchmark for argument mining implementations with task-specific data preparation."""
 
     def __init__(self, max_samples: int = 100, disable_openai: bool = False, 
-                 disable_tinyllama: bool = False, disable_modernbert: bool = False, 
-                 disable_deberta: bool = False, disable_llama3_3b: bool = False,
-                 disable_qwen2_5b: bool = False):
+                 disable_tinyllama: bool = False, disable_tinyllama_finetuned: bool = False,
+                 disable_tinyllama_base: bool = False, disable_modernbert: bool = False,
+                 disable_modernbert_base: bool = False, disable_deberta: bool = False, 
+                 disable_llama3_3b: bool = False, disable_qwen2_5b: bool = False):
         """
         Initialize the benchmark.
         
@@ -81,7 +85,10 @@ class ArgumentMiningBenchmark:
             max_samples: Maximum number of samples to use for benchmarking (default: 100)
             disable_openai: If True, skip OpenAI implementation initialization (default: False)
             disable_tinyllama: If True, skip TinyLlama implementation initialization (default: False)
+            disable_tinyllama_finetuned: If True, skip TinyLlama Fine-tuned implementation initialization (default: False)
+            disable_tinyllama_base: If True, skip TinyLlama Base implementation initialization (default: False)
             disable_modernbert: If True, skip ModernBERT implementation initialization (default: False)
+            disable_modernbert_base: If True, skip ModernBERT Base implementation initialization (default: False)
             disable_deberta: If True, skip DeBERTa implementation initialization (default: False)
             disable_llama3_3b: If True, skip Llama 3.2 3B implementation initialization (default: False)
             disable_qwen2_5b: If True, skip Qwen 2.5 1.5B implementation initialization (default: False)
@@ -93,7 +100,10 @@ class ArgumentMiningBenchmark:
         self.max_samples = max_samples
         self.disable_openai = disable_openai
         self.disable_tinyllama = disable_tinyllama
+        self.disable_tinyllama_finetuned = disable_tinyllama_finetuned
+        self.disable_tinyllama_base = disable_tinyllama_base
         self.disable_modernbert = disable_modernbert
+        self.disable_modernbert_base = disable_modernbert_base
         self.disable_deberta = disable_deberta
         self.disable_llama3_3b = disable_llama3_3b
         self.disable_qwen2_5b = disable_qwen2_5b
@@ -171,6 +181,34 @@ class ArgumentMiningBenchmark:
         else:
             log_initialization(logger, "TinyLlama implementation", "disabled")
         
+        # TinyLlama Fine-tuned implementation
+        if not self.disable_tinyllama_finetuned:
+            try:
+                tinyllama_finetuned_impl = TinyLlamaFinetunedImplementation()
+                if tinyllama_finetuned_impl.initialize():
+                    implementations['tinyllama-finetuned'] = tinyllama_finetuned_impl
+                    log_initialization(logger, "TinyLlama Fine-tuned implementation", "success")
+                else:
+                    log_initialization(logger, "TinyLlama Fine-tuned implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "TinyLlama Fine-tuned implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "TinyLlama Fine-tuned implementation", "disabled")
+        
+        # TinyLlama Base implementation
+        if not self.disable_tinyllama_base:
+            try:
+                tinyllama_base_impl = TinyLlamaBaseImplementation()
+                if tinyllama_base_impl.initialize():
+                    implementations['tinyllama-base'] = tinyllama_base_impl
+                    log_initialization(logger, "TinyLlama Base implementation", "success")
+                else:
+                    log_initialization(logger, "TinyLlama Base implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "TinyLlama Base implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "TinyLlama Base implementation", "disabled")
+        
         # ModernBERT implementation
         if not self.disable_modernbert:
             try:
@@ -184,6 +222,20 @@ class ArgumentMiningBenchmark:
                 log_initialization(logger, "ModernBERT implementation", "failed", str(e))
         else:
             log_initialization(logger, "ModernBERT implementation", "disabled")
+        
+        # ModernBERT Base implementation
+        if not self.disable_modernbert_base:
+            try:
+                modernbert_base_impl = ModernBERTBaseImplementation()
+                if modernbert_base_impl.initialize():
+                    implementations['modernbert-base'] = modernbert_base_impl
+                    log_initialization(logger, "ModernBERT Base implementation", "success")
+                else:
+                    log_initialization(logger, "ModernBERT Base implementation", "failed", "Initialization returned False")
+            except Exception as e:
+                log_initialization(logger, "ModernBERT Base implementation", "failed", str(e))
+        else:
+            log_initialization(logger, "ModernBERT Base implementation", "disabled")
         
         # DeBERTa implementation
         if not self.disable_deberta:
